@@ -401,10 +401,34 @@ pip install -r requirements.txt
 
 ---
 
+## 📚 **Documentación Completa**
+
+### 🚀 **Guías de Usuario**
+- **[Guía de Inicio Rápido](docs/user/quick_start.md)** - Instalación y primeros pasos
+- **[Configuración Avanzada](docs/algorithms/configuration.md)** - Parámetros y opciones
+- **[Ejemplos Prácticos](docs/examples/README.md)** - Casos de uso reales
+
+### 🧠 **Algoritmos de Optimización**
+- **[Resumen de Algoritmos](docs/algorithms/README.md)** - Comparación y selección
+- **[First Fit](docs/algorithms/basic/first_fit.md)** - Ultra-rápido para prototipos
+- **[Best Fit](docs/algorithms/basic/best_fit.md)** - Balance velocidad/calidad
+- **[Bottom Left](docs/algorithms/basic/bottom_left.md)** - Minimiza desperdicios
+- **[Genetic Algorithm](docs/algorithms/advanced/genetic.md)** - Máxima eficiencia
+- **[Simulated Annealing](docs/algorithms/advanced/simulated_annealing.md)** - Problemas complejos
+
+### 📊 **Análisis y Reportes**
+- **[Sistema de Reportes](docs/reporting/README.md)** - HTML, PDF, Excel
+- **[Métricas y KPIs](docs/metrics/README.md)** - Eficiencia y costos
+- **[Validación de Calidad](docs/validation/README.md)** - Detección de errores
+
+### 🔧 **Referencia Técnica**
+- **[API Reference](docs/api/README.md)** - Documentación completa de la API
+- **[Benchmarks](docs/algorithms/benchmarks.md)** - Comparativas de rendimiento
+- **[Troubleshooting](docs/algorithms/troubleshooting.md)** - Solución de problemas
+
 ## 📞 **Support**
 
 - **Documentation**: [docs/README.md](docs/README.md)
-- **Quick Start**: [docs/user/quick_start.md](docs/user/quick_start.md)
 - **Issues**: Create an issue on GitHub
 - **Discussions**: Use GitHub Discussions for questions
 
