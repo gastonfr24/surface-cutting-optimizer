@@ -534,4 +534,58 @@ class OptimizationConfig:
             "placement_precision": self.placement_precision,
             "optimize_for_cost": self.optimize_for_cost,
             "optimize_for_time": self.optimize_for_time
-        } 
+        }
+
+
+@dataclass
+class Surface:
+    """Simple surface representation for cutting optimization"""
+    width: float
+    height: float
+    
+    def __post_init__(self):
+        if self.width <= 0 or self.height <= 0:
+            raise InvalidDimensionsError(f"Surface dimensions must be positive: {self.width}x{self.height}")
+    
+    @property
+    def area(self) -> float:
+        """Calculate surface area"""
+        return self.width * self.height
+    
+    def __str__(self):
+        return f"Surface({self.width}x{self.height})"
+
+
+@dataclass  
+class Piece:
+    """Simple piece representation for cutting optimization"""
+    width: float
+    height: float
+    piece_id: int = 0
+    
+    def __post_init__(self):
+        if self.width <= 0 or self.height <= 0:
+            raise InvalidDimensionsError(f"Piece dimensions must be positive: {self.width}x{self.height}")
+    
+    @property
+    def area(self) -> float:
+        """Calculate piece area"""
+        return self.width * self.height
+    
+    def __str__(self):
+        return f"Piece({self.width}x{self.height}, id={self.piece_id})"
+
+
+@dataclass
+class CuttingPattern:
+    """Cutting pattern for column generation algorithms"""
+    surface_id: int
+    pieces: List[Piece] = field(default_factory=list)
+    
+    @property
+    def total_area(self) -> float:
+        """Calculate total area of pieces in pattern"""
+        return sum(piece.area for piece in self.pieces)
+    
+    def __str__(self):
+        return f"CuttingPattern(surface={self.surface_id}, pieces={len(self.pieces)})" 
