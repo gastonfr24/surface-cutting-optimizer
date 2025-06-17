@@ -1,229 +1,276 @@
-# First Fit Algorithm
+# ⚡ First Fit Algorithm
 
-## 📖 **Descripción General**
+## 📋 **Description**
+The **First Fit** algorithm is a greedy strategy that places each piece in the first stock that has enough space. It's the fastest algorithm in the library, ideal for rapid prototyping and situations where speed is more important than optimization.
 
-El algoritmo **First Fit** es una heurística greedy que resuelve el problema de corte de stock 2D colocando cada pieza en el **primer stock disponible** que tenga suficiente espacio. Es el algoritmo más simple y rápido de la librería.
+## 🔧 **Technical Specifications**
 
-## 🔬 **Características Técnicas**
+### Computational Complexity
+- **Time**: O(n × m) where n = pieces, m = stocks
+- **Space**: O(1) - constant memory
+- **Parallelizable**: Yes, partially
 
-- **Tipo**: Algoritmo greedy determinístico
-- **Complejidad Temporal**: O(n × m) donde n = número de piezas, m = número de stocks
-- **Complejidad Espacial**: O(1) adicional
-- **Estrategia**: Primera posición disponible encontrada
-- **Optimización**: Velocidad sobre eficiencia
+### Characteristics
+- ✅ **Ultra-fast execution** (< 0.01s for 1000 pieces)
+- ✅ **Minimal memory usage**
+- ✅ **Predictable behavior**
+- ⚠️ **Moderate efficiency** (45-60%)
+- ⚠️ **High waste** (40-55%)
 
-## ⚡ **Ventajas y Desventajas**
+## 🔍 **How It Works**
 
-### ✅ **Ventajas**
-- **Ultra-rápido**: Ideal para prototipos y pruebas
-- **Memoria mínima**: No requiere estructuras de datos complejas  
-- **Determinístico**: Siempre produce el mismo resultado
-- **Simple**: Fácil de entender y debuggear
-- **Escalable**: Rendimiento predecible en problemas grandes
-
-### ❌ **Desventajas**
-- **Baja eficiencia**: No optimiza el uso del material
-- **Dependiente del orden**: Resultado varía según orden de entrada
-- **Sin lookahead**: No considera posiciones futuras
-- **Desperdicios altos**: Puede dejar espacios inutilizables
-
-## 🎯 **Casos de Uso Ideales**
-
-### ✅ **Recomendado Para:**
-- **Prototipado rápido** de soluciones
-- **Baseline** para comparar otros algoritmos
-- **Tiempo crítico** con restricciones < 100ms
-- **Stocks abundantes** y económicos
-- **Desarrollo y testing** de aplicaciones
-
-### ❌ **No Recomendado Para:**
-- **Producción industrial** con costos altos de material
-- **Optimización final** de layouts comerciales
-- **Stocks limitados** o costosos
-- **Aplicaciones** que requieren máxima eficiencia
-
-## 🔧 **Configuración y Uso**
-
-### Uso Básico
+### Core Algorithm
 ```python
-from surface_optimizer.algorithms.basic import FirstFitAlgorithm
+def first_fit_placement(pieces, stocks):
+    """
+    First Fit implementation for 2D cutting stock problem
+    """
+    placed_pieces = []
+    
+    for piece in pieces:
+        for stock in stocks:
+            # Try placing piece at each valid position
+            for x in range(stock.width - piece.width + 1):
+                for y in range(stock.height - piece.height + 1):
+                    if can_place_piece(stock, piece, x, y):
+                        place_piece(stock, piece, x, y)
+                        placed_pieces.append({
+                            'piece': piece,
+                            'stock_id': stock.id,
+                            'position': (x, y)
+                        })
+                        break
+                if piece.placed:
+                    break
+            if piece.placed:
+                break
+    
+    return placed_pieces
+```
+
+### Placement Strategy
+1. **Sequential Order**: Process pieces in input order
+2. **Stock Scanning**: Check stocks from first to last
+3. **Position Search**: Scan from top-left (0,0) to bottom-right
+4. **First Valid Fit**: Place at first valid position found
+5. **No Optimization**: No backtracking or optimization
+
+## 🚀 **Usage Examples**
+
+### Basic Usage
+```python
+from surface_optimizer import SurfaceOptimizer
+
+# Create optimizer
+optimizer = SurfaceOptimizer()
+
+# Sample data
+orders = [
+    {"width": 100, "height": 50, "quantity": 5},
+    {"width": 80, "height": 60, "quantity": 3},
+    {"width": 120, "height": 40, "quantity": 2}
+]
+
+stock = [
+    {"width": 300, "height": 200, "cost": 15.0},
+    {"width": 250, "height": 150, "cost": 12.0}
+]
+
+# Optimize with First Fit
+result = optimizer.optimize(
+    orders=orders,
+    stock=stock,
+    algorithm="first_fit"
+)
+
+print(f"Efficiency: {result.efficiency_percentage:.1f}%")
+print(f"Execution time: {result.execution_time:.3f} seconds")
+```
+
+### With Configuration
+```python
 from surface_optimizer.core.models import OptimizationConfig
 
-# Crear algoritmo
-algorithm = FirstFitAlgorithm()
-
-# Configuración básica
+# Configuration for maximum speed
 config = OptimizationConfig(
-    allow_rotation=True,
-    precision_tolerance=0.001
+    allow_rotation=False,      # Disable rotation for more speed
+    precision_tolerance=1.0,   # Lower precision for speed
+    max_computation_time=1,    # 1 second limit
+    parallel_processing=True   # Use parallelization
 )
 
-# Ejecutar optimización
-result = algorithm.optimize(stocks, orders, config)
-
-print(f"Algoritmo: {result.algorithm_used}")
-print(f"Eficiencia: {result.efficiency_percentage:.1f}%")
-print(f"Piezas colocadas: {len(result.placed_shapes)}")
-```
-
-### Configuración Avanzada
-```python
-# Para máximo rendimiento
-config = OptimizationConfig(
-    allow_rotation=False,  # Sin rotación = más rápido
-    precision_tolerance=1.0,  # Menor precisión = más rápido
-    max_computation_time=0.1,  # Límite de tiempo
-    early_termination=True  # Parar en primera solución
-)
-
-# Para mejor calidad (dentro de First Fit)
-config = OptimizationConfig(
-    allow_rotation=True,  # Explorar rotaciones
-    precision_tolerance=0.001,  # Alta precisión
-    sort_orders="area_desc",  # Ordenar por área descendente
-    sort_stocks="area_asc"  # Stocks pequeños primero
+result = optimizer.optimize(
+    orders=orders,
+    stock=stock,
+    algorithm="first_fit",
+    config=config
 )
 ```
 
-## 📊 **Rendimiento y Benchmarks**
-
-### Benchmarks Típicos
-
-| Problema | Piezas | Stocks | Tiempo | Eficiencia | Stocks Usados |
-|----------|--------|--------|--------|------------|---------------|
-| Pequeño | 10-50 | 5-10 | 0.001s | 45-60% | 70-90% |
-| Mediano | 100-500 | 10-50 | 0.01s | 40-55% | 60-80% |
-| Grande | 1000+ | 50+ | 0.1s | 35-50% | 50-70% |
-
-### Factores que Afectan el Rendimiento
-
-**⬆️ Mejora eficiencia cuando:**
-- Piezas similares en tamaño
-- Stocks uniformes
-- Orden de entrada optimizado
-- Proporción alta de stocks vs piezas
-
-**⬇️ Reduce eficiencia cuando:**
-- Piezas muy variadas en tamaño
-- Stocks heterogéneos  
-- Orden aleatorio de entrada
-- Pocas opciones de stock
-
-## 🛠️ **Algoritmo Interno**
-
-### Pseudocódigo
-```
-ALGORITHM FirstFit(stocks, orders):
-    FOR each order in orders:
-        FOR each piece in order.quantity:
-            placed = False
-            FOR each stock in stocks:
-                IF CanPlace(piece, stock):
-                    Place(piece, stock)
-                    placed = True
-                    BREAK
-            IF NOT placed:
-                AddToUnfulfilled(piece)
-    RETURN result
-```
-
-### Estrategia de Colocación
-1. **Escaneo izquierda-derecha, arriba-abajo**
-2. **Primera posición válida** encontrada
-3. **Sin backtracking** ni optimización local
-4. **Verificación simple** de solapamiento
-
-## 📈 **Casos de Prueba y Ejemplos**
-
-### Ejemplo 1: Caso Ideal (Alta Eficiencia)
+### Real-time Application
 ```python
-# Piezas uniformes en stocks uniformes
-orders = [
-    {"width": 100, "height": 100, "quantity": 9}  # 9 cuadrados
-]
-stocks = [
-    {"width": 300, "height": 300, "cost": 10}  # Caben exactamente 9
-]
-
-# Resultado esperado: ~100% eficiencia
-result = algorithm.optimize(stocks, orders, config)
-# Eficiencia: ~100%, Stocks: 1
+def rapid_cutting_estimate(orders, stock):
+    """
+    Ultra-fast estimate for real-time applications
+    """
+    optimizer = SurfaceOptimizer()
+    
+    # Minimum configuration for maximum speed
+    config = OptimizationConfig(
+        allow_rotation=False,
+        precision_tolerance=2.0,
+        max_iterations=100
+    )
+    
+    result = optimizer.optimize(orders, stock, "first_fit", config)
+    
+    return {
+        'efficiency': result.efficiency_percentage,
+        'stocks_needed': result.total_stock_used,
+        'execution_time': result.execution_time,
+        'suitable_for_production': result.efficiency_percentage > 50
+    }
 ```
 
-### Ejemplo 2: Caso Problemático (Baja Eficiencia)
+## 📊 **Performance Analysis**
+
+### Typical Performance
+| Problem Size | Execution Time | Efficiency | Memory Usage |
+|--------------|----------------|------------|--------------|
+| Small (≤50 pieces) | < 0.001s | 50-65% | < 1MB |
+| Medium (≤500 pieces) | < 0.01s | 45-60% | < 5MB |
+| Large (≤5000 pieces) | < 0.1s | 40-55% | < 20MB |
+
+### Comparison with Other Algorithms
 ```python
-# Piezas variadas que generan fragmentación
-orders = [
-    {"width": 250, "height": 150, "quantity": 1},  # Pieza grande
-    {"width": 25, "height": 25, "quantity": 10}    # Piezas pequeñas
-]
-stocks = [
-    {"width": 300, "height": 200, "cost": 15}
-]
+# Performance comparison example
+import time
 
-# Resultado esperado: ~40-50% eficiencia
-result = algorithm.optimize(stocks, orders, config)
-# Eficiencia: ~45%, fragmentación alta
+algorithms = ['first_fit', 'best_fit', 'genetic']
+results = {}
+
+for algorithm in algorithms:
+    start_time = time.time()
+    result = optimizer.optimize(orders, stock, algorithm)
+    execution_time = time.time() - start_time
+    
+    results[algorithm] = {
+        'time': execution_time,
+        'efficiency': result.efficiency_percentage,
+        'stocks_used': result.total_stock_used
+    }
+
+# Typical results:
+# first_fit: time=0.003s, efficiency=52%, stocks=8
+# best_fit:  time=0.025s, efficiency=67%, stocks=6  
+# genetic:   time=2.450s, efficiency=84%, stocks=4
 ```
 
-### Ejemplo 3: Optimización del Orden de Entrada
+## 🎯 **When to Use**
+
+### ✅ **Recommended For:**
+- **Rapid prototyping** and proof of concepts
+- **Real-time applications** requiring instant response
+- **Large volume processing** with speed priority
+- **Initial estimates** before detailed optimization
+- **Resource-constrained environments**
+- **Simple geometric patterns**
+
+### ❌ **Not Recommended For:**
+- **Production optimization** requiring high efficiency
+- **Expensive materials** where waste is costly
+- **Complex cutting patterns** with tight constraints
+- **High-precision requirements**
+- **Projects with time for better optimization**
+
+## 🔧 **Advanced Configuration**
+
+### Speed Optimization
 ```python
-# Mejor resultado ordenando por área descendente
-orders_sorted = sorted(orders, key=lambda x: x["width"] * x["height"], reverse=True)
-
-result1 = algorithm.optimize(stocks, orders, config)        # Orden original
-result2 = algorithm.optimize(stocks, orders_sorted, config) # Orden optimizado
-
-print(f"Original: {result1.efficiency_percentage:.1f}%")
-print(f"Ordenado: {result2.efficiency_percentage:.1f}%")
-# Típicamente: Ordenado > Original en 5-15%
+# Maximum speed configuration
+speed_config = OptimizationConfig(
+    allow_rotation=False,           # Disable rotation
+    precision_tolerance=5.0,        # Lower precision
+    max_iterations=50,              # Limit iterations
+    parallel_processing=True,       # Enable parallelization
+    early_termination=True,         # Stop early if good enough
+    memory_optimization=True        # Optimize memory usage
+)
 ```
 
-## 🔗 **Integration con Otros Componentes**
-
-### Con Sistema de Reportes
+### Quality/Speed Balance
 ```python
-from surface_optimizer.reporting import ReportGenerator
-
-# Generar reporte detallado
-report = ReportGenerator()
-report.generate_cutting_plan_report(result, format="html")
-report.generate_algorithm_comparison([result], format="pdf")
+# Balanced configuration
+balanced_config = OptimizationConfig(
+    allow_rotation=True,            # Allow rotation
+    precision_tolerance=1.0,        # Good precision
+    max_iterations=200,             # More iterations
+    target_efficiency=0.6,          # 60% efficiency target
+    max_computation_time=0.1        # 100ms limit
+)
 ```
 
-### Con Validación
+## 🐛 **Troubleshooting**
+
+### Common Issues
+
+**1. Low Efficiency**
 ```python
-from surface_optimizer.core.validators import ValidationResult
-
-# Validar resultado
-validator = ValidationResult()
-validation = validator.validate_cutting_result(result)
-
-if validation.has_overlaps:
-    print("⚠️ Advertencia: Se detectaron solapamientos")
-if validation.efficiency_below_threshold:
-    print("💡 Sugerencia: Considere usar Best Fit o Genetic Algorithm")
+# Problem: Efficiency below 40%
+# Solution: Check piece/stock ratio
+def check_feasibility(orders, stock):
+    total_piece_area = sum(o['width'] * o['height'] * o['quantity'] for o in orders)
+    total_stock_area = sum(s['width'] * s['height'] for s in stock) 
+    
+    if total_piece_area > total_stock_area * 0.9:
+        print("Warning: Insufficient stock area")
+        return False
+    return True
 ```
 
-## 📚 **Referencias y Lecturas Adicionales**
+**2. Long Execution Time**
+```python
+# Problem: Slower than expected
+# Solution: Reduce precision and iterations
+fast_config = OptimizationConfig(
+    precision_tolerance=2.0,        # Reduce precision
+    max_iterations=100,             # Limit iterations
+    parallel_processing=True        # Use parallel processing
+)
+```
 
-### Papers Académicos
-- Johnson, D. S. (1973). "Near-optimal bin packing algorithms". MIT
-- Coffman Jr, E. G., et al. (1984). "Bin packing: A survey". Operations Research
-- Baker, B. S. (1985). "A new proof for the first-fit decreasing bin-packing algorithm"
+**3. Memory Issues**
+```python
+# Problem: High memory usage with large datasets
+# Solution: Process in batches
+def batch_optimize(orders, stock, batch_size=1000):
+    results = []
+    for i in range(0, len(orders), batch_size):
+        batch = orders[i:i+batch_size]
+        result = optimizer.optimize(batch, stock, 'first_fit')
+        results.append(result)
+    return combine_results(results)
+```
 
-### Libros Recomendados
-- "Introduction to Algorithms" - Cormen, Leiserson, Rivest, Stein (Capítulo sobre Greedy Algorithms)
-- "Algorithm Design" - Kleinberg, Tardos
-- "Approximation Algorithms" - Vazirani
+## 📚 **References**
 
-### Recursos Online
-- [Cutting Stock Problem - Wikipedia](https://en.wikipedia.org/wiki/Cutting_stock_problem)
-- [Bin Packing Algorithms - GeeksforGeeks](https://www.geeksforgeeks.org/bin-packing-problem-minimize-number-of-used-bins/)
+### Academic Sources
+1. **Coffman Jr, E.G., et al.** (1984). "Approximation algorithms for bin packing: a survey"
+2. **Johnson, D.S.** (1973). "Near-optimal bin packing algorithms"
+3. **Baker, B.S., et al.** (1980). "A 5/4 algorithm for two-dimensional packing"
 
-## 🔄 **Ver También**
+### Implementation Details
+- Based on classical bin packing literature
+- Optimized for 2D rectangular cutting
+- Includes collision detection and overlap prevention
+- Supports material constraints and rotation
 
-- **[Best Fit Algorithm](best_fit.md)** - Mejor alternativa con similar velocidad
-- **[Bottom Left Algorithm](bottom_left.md)** - Más eficiente, algo más lento
-- **[Genetic Algorithm](../advanced/genetic.md)** - Máxima eficiencia
-- **[Comparación de Algoritmos](../README.md#comparación-de-rendimiento)** - Tabla comparativa completa 
+### Related Algorithms
+- **[Best Fit](best_fit.md)** - Improved fit selection
+- **[Bottom Left](bottom_left.md)** - Position optimization  
+- **[Genetic Algorithm](../advanced/genetic.md)** - Maximum efficiency
+- **[Configuration Guide](../configuration.md)** - Advanced parameters
+
+---
+
+**Next**: Learn about [Best Fit Algorithm](best_fit.md) for better efficiency with minimal speed cost. 

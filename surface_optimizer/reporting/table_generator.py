@@ -1,6 +1,15 @@
 """
-Table Generator for Surface Cutting Optimizer
-Professional table generation for detailed cutting reports
+📊 Professional Table Generator for Cutting Optimization Reports
+
+This module provides specialized table generators for creating professional
+reports with cutting plans, stock utilization, order fulfillment, and cost analysis.
+
+Features:
+- HTML tables with professional styling
+- Export to Excel, PDF, and CSV
+- Customizable formatting and branding
+- Interactive elements for web reports
+- Performance metrics visualization
 """
 
 import pandas as pd
@@ -25,7 +34,12 @@ class TableConfig:
 
 
 class CuttingPlanTable:
-    """Detailed cutting plan table"""
+    """
+    Professional table generator for cutting plans
+    
+    Creates detailed tables showing piece placements, stock usage,
+    and optimization metrics with professional formatting.
+    """
     
     def __init__(self, config: Optional[TableConfig] = None):
         self.config = config or TableConfig()

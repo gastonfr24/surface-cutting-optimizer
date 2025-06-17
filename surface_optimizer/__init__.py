@@ -1,34 +1,37 @@
 """
-Surface Cutting Optimizer Library
-=================================
+Surface Cutting Optimizer - Advanced 2D Cutting Stock Library
 
-Librería para optimización de corte de superficies bidimensionales.
+Library for bidimensional surface cutting optimization.
 
-Funciona con múltiples materiales: vidrio, metal, madera, plástico, tela, etc.
+Key Features:
+- Multiple optimization algorithms
+- Automatic parameter scaling  
+- Result visualization
+- Professional reporting
+- Test cases with known results
 
-Características principales:
-- Múltiples algoritmos de optimización
-- Soporte para formas regulares e irregulares
-- Visualización de resultados
-- Métricas detalladas de eficiencia
-- Casos de test con resultados conocidos
+Version: 1.0.0-beta
 """
 
+from .core.optimizer import Optimizer as SurfaceOptimizer
+from .core.models import OptimizationConfig, OptimizationResult
+from .utils.visualization import CuttingVisualizer
+from .reporting.report_generator import ReportGenerator
+
 __version__ = "1.0.0-beta"
-__author__ = "Surface Cutting Team"
+__author__ = "Surface Cutting Optimizer Team"
+__license__ = "MIT"
 
-# Importaciones principales
-from .core.models import Stock, Order, CuttingResult
-from .core.optimizer import Optimizer
-from .utils.visualization import visualize_cutting_plan
-from .utils.metrics import calculate_efficiency, calculate_waste
+# Package information
+__title__ = "Surface Cutting Optimizer"
+__description__ = "Advanced 2D cutting stock optimization library"
+__url__ = "https://github.com/gastonfr24/surface-cutting-optimizer"
 
+# Export main classes
 __all__ = [
-    "Stock",
-    "Order", 
-    "CuttingResult",
-    "Optimizer",
-    "visualize_cutting_plan",
-    "calculate_efficiency",
-    "calculate_waste"
+    "SurfaceOptimizer",
+    "OptimizationConfig", 
+    "OptimizationResult",
+    "CuttingVisualizer",
+    "ReportGenerator"
 ] 

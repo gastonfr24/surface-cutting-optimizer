@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from setuptools import setup, find_packages
 
 with open("README.md", "r", encoding="utf-8") as fh:
@@ -6,76 +8,63 @@ with open("README.md", "r", encoding="utf-8") as fh:
 setup(
     name="surface-cutting-optimizer",
     version="1.0.0-beta",
-    author="Surface Cutting Team", 
-    author_email="team@surfacecutting.com",
-    description="Librería para optimización de corte de superficies bidimensionales",
+    author="Surface Cutting Optimizer Team",
+    author_email="gastonfr24@gmail.com",
+    description="Advanced library for bidimensional surface cutting optimization",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/username/surface-cutting-optimizer",
+    url="https://github.com/gastonfr24/surface-cutting-optimizer",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 4 - Beta",
+        "Intended Audience :: Developers",
         "Intended Audience :: Manufacturing",
-        "Intended Audience :: Science/Research",
-        "Topic :: Scientific/Engineering :: Mathematics",
-        "Topic :: Software Development :: Libraries :: Python Modules",
         "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
-        "Operating System :: OS Independent",
+        "Topic :: Scientific/Engineering",
+        "Topic :: Software Development :: Libraries :: Python Modules",
     ],
     python_requires=">=3.8",
     install_requires=[
-        "numpy>=1.21.0",
-        "matplotlib>=3.5.0", 
-        "scipy>=1.7.0",
-        "pandas>=1.3.0",
-        "shapely>=1.8.0"
+        "numpy>=1.19.0",
+        "matplotlib>=3.3.0",
+        "pandas>=1.1.0",
+        "dataclasses-json>=0.5.0",
     ],
     extras_require={
         "dev": [
             "pytest>=6.0",
-            "pytest-cov>=2.12",
+            "pytest-cov>=2.10",
             "black>=21.0",
-            "flake8>=3.9",
-            "mypy>=0.910"
+            "flake8>=3.8",
+            "mypy>=0.812",
         ],
-        "viz": [
-            "plotly>=5.0",
-            "pillow>=8.3.0",
-            "seaborn>=0.11.0"
+        "reporting": [
+            "openpyxl>=3.0.0",
+            "jinja2>=2.11.0",
+            "weasyprint>=52.0",
         ],
-        "advanced": [
-            "numba>=0.56",
-            "deap>=1.3",
-            "scikit-learn>=1.0"
+        "visualization": [
+            "plotly>=4.14.0",
+            "dash>=1.19.0",
         ],
-        "export": [
-            "reportlab>=3.6.0",
-            "svglib>=1.2.0",
-            "cairosvg>=2.5.0"
-        ]
-    },
-    entry_points={
-        "console_scripts": [
-            "surface-optimizer=surface_optimizer.cli:main",
+        "all": [
+            "openpyxl>=3.0.0",
+            "jinja2>=2.11.0", 
+            "weasyprint>=52.0",
+            "plotly>=4.14.0",
+            "dash>=1.19.0",
         ],
     },
-    include_package_data=True,
-    zip_safe=False,
-    keywords=[
-        "cutting stock problem", 
-        "bin packing", 
-        "optimization", 
-        "2d cutting", 
-        "material optimization",
-        "manufacturing",
-        "glass cutting",
-        "metal cutting", 
-        "wood cutting",
-        "fabric cutting"
-    ]
+    keywords="cutting-stock, optimization, 2d-cutting, manufacturing, algorithms",
+    project_urls={
+        "Bug Reports": "https://github.com/gastonfr24/surface-cutting-optimizer/issues",
+        "Source": "https://github.com/gastonfr24/surface-cutting-optimizer",
+        "Documentation": "https://github.com/gastonfr24/surface-cutting-optimizer/docs",
+    },
 ) 
