@@ -1,0 +1,1 @@
+"""Industry validation tests for Surface Cutting Optimizer""" 

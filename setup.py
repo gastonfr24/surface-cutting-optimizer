@@ -31,34 +31,51 @@ setup(
     ],
     python_requires=">=3.8",
     install_requires=[
-        "numpy>=1.19.0",
-        "matplotlib>=3.3.0",
-        "pandas>=1.1.0",
-        "dataclasses-json>=0.5.0",
+        # Core optimization libraries
+        "ortools>=9.7.2963",
+        "mip>=1.15.0",
+        "pulp>=2.7.0",
+        "scipy>=1.11.0",
+        "numpy>=1.24.0",
+        
+        # Data processing & visualization
+        "pandas>=2.0.0",
+        "matplotlib>=3.7.0",
+        "seaborn>=0.12.0",
+        
+        # Performance
+        "numba>=0.57.0",
+        "joblib>=1.3.0",
+        "psutil>=5.9.0",
     ],
     extras_require={
         "dev": [
-            "pytest>=6.0",
-            "pytest-cov>=2.10",
-            "black>=21.0",
-            "flake8>=3.8",
-            "mypy>=0.812",
+            "pytest>=7.4.0",
+            "pytest-cov>=4.1.0",
+            "black>=23.7.0",
+            "flake8>=6.0.0",
         ],
         "reporting": [
-            "openpyxl>=3.0.0",
-            "jinja2>=2.11.0",
-            "weasyprint>=52.0",
+            "openpyxl>=3.1.0",
+            "xlsxwriter>=3.1.0",
+            "plotly>=5.15.0",
         ],
-        "visualization": [
-            "plotly>=4.14.0",
-            "dash>=1.19.0",
+        "advanced": [
+            "cvxpy>=1.4.0",
+            "networkx>=3.1",
+        ],
+        "docs": [
+            "sphinx>=7.1.0",
+            "sphinx-rtd-theme>=1.3.0",
         ],
         "all": [
-            "openpyxl>=3.0.0",
-            "jinja2>=2.11.0", 
-            "weasyprint>=52.0",
-            "plotly>=4.14.0",
-            "dash>=1.19.0",
+            "openpyxl>=3.1.0",
+            "xlsxwriter>=3.1.0",
+            "plotly>=5.15.0",
+            "cvxpy>=1.4.0",
+            "networkx>=3.1",
+            "sphinx>=7.1.0",
+            "sphinx-rtd-theme>=1.3.0",
         ],
     },
     keywords="cutting-stock, optimization, 2d-cutting, manufacturing, algorithms",

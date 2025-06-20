@@ -22,8 +22,8 @@ from dataclasses import dataclass
 from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 
-from ...core.models import OptimizationResult, OptimizationConfig, Stock, Order
-from ...core.geometry import Rectangle, can_place_rectangle
+from ...core.models import CuttingResult, OptimizationConfig, Stock, Order
+from ...core.geometry import Rectangle
 from ...utils.metrics import calculate_efficiency
 from ..base import BaseAlgorithm
 
@@ -347,7 +347,7 @@ class HybridGeneticAlgorithm(BaseAlgorithm):
         self.convergence_data = []
         
     def optimize(self, stocks: List[Stock], orders: List[Order], 
-                config: OptimizationConfig) -> OptimizationResult:
+                config: OptimizationConfig) -> CuttingResult:
         """
         Execute hybrid genetic algorithm optimization
         """
@@ -581,18 +581,15 @@ class HybridGeneticAlgorithm(BaseAlgorithm):
         
         return pieces
     
-    def _create_empty_result(self, start_time: float) -> OptimizationResult:
+    def _create_empty_result(self, start_time: float) -> CuttingResult:
         """Create empty result for failed optimization"""
-        return OptimizationResult(
+        return CuttingResult(
             placed_shapes=[],
             efficiency_percentage=0.0,
             total_stock_used=0,
-            total_orders_fulfilled=0,
             unfulfilled_orders=[],
             algorithm_used=self.name,
-            computation_time=time.time() - start_time,
-            success=False
-        )
+            computation_time=time.time() - start_time)
     
     # Placeholder methods - would need full implementation
     def _find_most_efficient_placement(self, piece: Dict, stocks: List[Stock], existing: List[Dict]) -> Optional[Dict]:
@@ -688,7 +685,7 @@ class HybridGeneticAlgorithm(BaseAlgorithm):
     
     def _build_optimization_result(self, best_individual: Optional[AdvancedIndividual], 
                                  stocks: List[Stock], computation_time: float, 
-                                 generations_used: int, params: Dict[str, Any]) -> OptimizationResult:
+                                 generations_used: int, params: Dict[str, Any]) -> CuttingResult:
         """Build final optimization result"""
         if not best_individual or not best_individual.placement_genes:
             return self._create_empty_result(0)
@@ -706,17 +703,13 @@ class HybridGeneticAlgorithm(BaseAlgorithm):
                 'rotated': gene.get('rotated', False)
             })
         
-        return OptimizationResult(
+        return CuttingResult(
             placed_shapes=placed_shapes,
             efficiency_percentage=best_individual.efficiency * 100,
-            total_stock_used=len(set(shape['stock_index'] for shape in placed_shapes)),
-            total_orders_fulfilled=len(placed_shapes),
+            total_stock_used=len(set(shape['stock_index'] for shape in placed_shapes))),
             unfulfilled_orders=[],
             algorithm_used=self.name,
-            computation_time=computation_time,
-            success=len(placed_shapes) > 0,
-            algorithm_details={
-                'generations_used': generations_used,
+            computation_time=computation_time) > 0,
                 'islands_used': len(self.islands),
                 'final_fitness': best_individual.fitness,
                 'local_search_applied': best_individual.local_search_applied,

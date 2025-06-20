@@ -32,8 +32,8 @@ import random
 import time
 from typing import List, Dict, Any
 
-from ...core.models import OptimizationResult, OptimizationConfig
-from ...core.geometry import Rectangle, can_place_rectangle
+from ...core.models import CuttingResult, OptimizationConfig, PlacedShape, Order, Stock
+from ...core.geometry import Rectangle
 from ...utils.metrics import calculate_efficiency
 from ...utils.logging import get_logger
 from ..base import BaseAlgorithm
@@ -77,8 +77,8 @@ class FirstFitAlgorithm(BaseAlgorithm):
         self.supports_rotation = True
         self.complexity = "O(n×m)"
     
-    def optimize(self, stocks: List[Dict], orders: List[Dict], 
-                config: OptimizationConfig) -> OptimizationResult:
+    def optimize(self, stocks: List[Stock], orders: List[Order], 
+                config: OptimizationConfig) -> CuttingResult:
         """
         Execute optimization using First Fit algorithm.
 
@@ -87,8 +87,8 @@ class FirstFitAlgorithm(BaseAlgorithm):
         is enabled, it also tries 90° rotation before moving to next stock.
 
         Args:
-            stocks (List[Dict]): List of available stocks
-            orders (List[Dict]): List of cutting orders  
+            stocks (List[Stock]): List of available stocks
+            orders (List[Order]): List of cutting orders  
             config (OptimizationConfig): Optimization configuration
 
         Returns:
@@ -113,30 +113,30 @@ class FirstFitAlgorithm(BaseAlgorithm):
         
         # Initialize result
         placed_shapes = []
-        total_pieces = sum(order.get('quantity', 1) for order in orders)
+        total_pieces = sum(order.quantity for order in orders)
         unfulfilled_orders = []
         
-        # Working copies
+        # Working copies - convert Stock objects to working format
         working_stocks = []
         for i, stock in enumerate(stocks):
             working_stocks.append({
                 'id': i,
-                'width': stock['width'],
-                'height': stock['height'], 
-                'cost': stock.get('cost', 0),
-                'material': stock.get('material', 'default'),
+                'width': stock.width,
+                'height': stock.height, 
+                'cost': stock.cost_per_unit,
+                'material': stock.material_type.value,
                 'occupied_areas': []  # List of placed rectangles
             })
         
-        # Process each order
+        # Process each order - convert Order objects to working format
         for order in orders:
-            quantity = order.get('quantity', 1)
-            order_id = order.get('id', 'unknown')
+            quantity = order.quantity
+            order_id = order.id
             
             for piece_num in range(quantity):
                 piece_id = f"{order_id}_{piece_num + 1}"
-                piece_width = order['width']
-                piece_height = order['height']
+                piece_width = order.shape.width
+                piece_height = order.shape.height
                 
                 placed = False
                 
@@ -206,20 +206,50 @@ class FirstFitAlgorithm(BaseAlgorithm):
         
         efficiency = (total_placed_area / total_stock_area * 100) if total_stock_area > 0 else 0
         
+        # Convert placed_shapes to PlacedShape objects
+        placed_shape_objects = []
+        for shape_data in placed_shapes:
+            # Create Rectangle shape for the placed piece
+            rect = Rectangle(
+                width=shape_data['width'],
+                height=shape_data['height'],
+                x=shape_data['x'],
+                y=shape_data['y']
+            )
+            
+            placed_shape = PlacedShape(
+                order_id=shape_data['piece_id'],
+                shape=rect,
+                stock_id=str(shape_data['stock_id']),
+                rotation_applied=90.0 if shape_data['rotated'] else 0.0
+            )
+            placed_shape_objects.append(placed_shape)
+        
+        # Convert unfulfilled_orders to Order objects (simplified)
+        unfulfilled_order_objects = []
+        for order_data in unfulfilled_orders:
+            # Create a simple rectangle for the unfulfilled order
+            rect = Rectangle(order_data['width'], order_data['height'], 0, 0)
+            order = Order(
+                id=order_data['order_id'],
+                shape=rect,
+                quantity=1
+            )
+            unfulfilled_order_objects.append(order)
+        
         logger.info(f"Optimization completed:")
         logger.info(f"  - Placed pieces: {len(placed_shapes)}/{total_pieces}")
         logger.info(f"  - Efficiency: {efficiency:.1f}%")
         logger.info(f"  - Stocks used: {len(used_stocks)}")
         logger.info(f"  - Time: {computation_time:.3f}s")
         
-        return OptimizationResult(
-            placed_shapes=placed_shapes,
+        return CuttingResult(
+            placed_shapes=placed_shape_objects,
             efficiency_percentage=efficiency,
             total_stock_used=len(used_stocks),
             algorithm_used=self.name,
             computation_time=computation_time,
-            success=len(placed_shapes) > 0,
-            unfulfilled_orders=unfulfilled_orders
+            unfulfilled_orders=unfulfilled_order_objects
         )
     
     def _find_valid_position(self, stock: Dict, width: float, height: float):
@@ -247,13 +277,13 @@ class FirstFitAlgorithm(BaseAlgorithm):
             for x in range(int(stock_width - width) + 1):
                 
                 # Check overlap with existing pieces
-                piece_rect = Rectangle(x, y, width, height)
+                piece_rect = Rectangle(width, height, x, y)
                 overlap = False
                 
                 for occupied in stock['occupied_areas']:
                     occupied_rect = Rectangle(
-                        occupied['x'], occupied['y'],
-                        occupied['width'], occupied['height']
+                        occupied['width'], occupied['height'],
+                        occupied['x'], occupied['y']
                     )
                     
                     if self._rectangles_overlap(piece_rect, occupied_rect):

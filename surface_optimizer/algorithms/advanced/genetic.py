@@ -20,8 +20,8 @@ import time
 from typing import List, Dict, Any, Tuple, Optional
 from dataclasses import dataclass
 
-from ...core.models import OptimizationResult, OptimizationConfig
-from ...core.geometry import Rectangle, can_place_rectangle
+from ...core.models import CuttingResult, OptimizationConfig, PlacedShape, Order, Stock
+from ...core.geometry import Rectangle
 from ...utils.metrics import calculate_efficiency
 from ..base import BaseAlgorithm
 
@@ -70,8 +70,8 @@ class GeneticAlgorithm(BaseAlgorithm):
         self.best_solution = None
         self.evolution_history = []
         
-    def optimize(self, stocks: List[Dict], orders: List[Dict], 
-                config: OptimizationConfig) -> OptimizationResult:
+    def optimize(self, stocks: List[Stock], orders: List[Order], 
+                config: OptimizationConfig) -> CuttingResult:
         """
         Execute genetic algorithm optimization
         
@@ -81,23 +81,45 @@ class GeneticAlgorithm(BaseAlgorithm):
             config: Optimization configuration
             
         Returns:
-            OptimizationResult with best solution found
+            CuttingResult with best solution found
         """
         start_time = time.time()
         
+        # Convert objects to dictionary format for internal processing
+        stocks_dict = [
+            {
+                'width': stock.width,
+                'height': stock.height,
+                'cost': stock.cost_per_unit,
+                'material': stock.material_type.value
+            }
+            for stock in stocks
+        ]
+        
+        orders_dict = [
+            {
+                'id': order.id,
+                'width': order.shape.width,
+                'height': order.shape.height,
+                'quantity': order.quantity,
+                'material': order.material_type.value
+            }
+            for order in orders
+        ]
+        
         # Calculate problem complexity and auto-scale parameters
-        complexity = self._calculate_problem_complexity(orders, stocks)
+        complexity = self._calculate_problem_complexity(orders_dict, stocks_dict)
         genetic_config = self._get_genetic_configuration(complexity, config)
         
         # Expand orders to individual pieces
-        expanded_pieces = self._expand_orders_to_pieces(orders, genetic_config.population_size)
+        expanded_pieces = self._expand_orders_to_pieces(orders_dict, genetic_config.population_size)
         
         if not expanded_pieces:
             return self._create_empty_result(start_time)
         
         # Initialize population
         population = self._initialize_population(
-            expanded_pieces, stocks, genetic_config
+            expanded_pieces, stocks_dict, genetic_config
         )
         
         # Evolution loop
@@ -106,7 +128,7 @@ class GeneticAlgorithm(BaseAlgorithm):
         
         for generation in range(genetic_config.generations):
             # Evaluate population fitness
-            self._evaluate_population(population, stocks, config)
+            self._evaluate_population(population, stocks_dict, config)
             
             # Track best solution
             current_best = max(population, key=lambda ind: ind.fitness)
@@ -140,7 +162,7 @@ class GeneticAlgorithm(BaseAlgorithm):
         computation_time = time.time() - start_time
         
         return self._build_result(
-            best_individual, stocks, computation_time, 
+            best_individual, stocks_dict, computation_time, 
             generation + 1, genetic_config
         )
     
@@ -689,36 +711,41 @@ class GeneticAlgorithm(BaseAlgorithm):
     
     def _build_result(self, best_individual: Individual, stocks: List[Dict],
                      computation_time: float, generations_used: int,
-                     genetic_config: GeneticConfig) -> OptimizationResult:
+                     genetic_config: GeneticConfig) -> CuttingResult:
         """Build final optimization result"""
         
         if not best_individual or not best_individual.chromosome:
             return self._create_empty_result(0)
         
-        # Convert chromosome to placed shapes
-        placed_shapes = []
+        # Convert chromosome to PlacedShape objects
+        placed_shape_objects = []
         for gene in best_individual.chromosome:
-            placed_shapes.append({
-                'x': gene['x'],
-                'y': gene['y'],
-                'width': gene['width'],
-                'height': gene['height'],
-                'stock_index': gene['stock_index'],
-                'piece_id': gene.get('piece_id', 'unknown'),
-                'rotated': gene.get('rotated', False)
-            })
+            # Create Rectangle shape for the placed piece
+            rect = Rectangle(
+                x=gene['x'],
+                y=gene['y'],
+                width=gene['width'],
+                height=gene['height']
+            )
+            
+            placed_shape = PlacedShape(
+                order_id=gene.get('piece_id', 'unknown'),
+                shape=rect,
+                stock_id=str(gene['stock_index']),
+                rotation_applied=90.0 if gene.get('rotated', False) else 0.0
+            )
+            placed_shape_objects.append(placed_shape)
         
         # Calculate final metrics
         efficiency = best_individual.efficiency
         
-        return OptimizationResult(
-            placed_shapes=placed_shapes,
+        return CuttingResult(
+            placed_shapes=placed_shape_objects,
             efficiency_percentage=efficiency * 100,
-            total_stock_used=len(set(shape['stock_index'] for shape in placed_shapes)),
+            total_stock_used=len(set(gene['stock_index'] for gene in best_individual.chromosome)),
             algorithm_used=self.name,
             computation_time=computation_time,
-            success=len(placed_shapes) > 0,
-            algorithm_details={
+            metadata={
                 'generations_used': generations_used,
                 'population_size': genetic_config.population_size,
                 'final_fitness': best_individual.fitness,
@@ -727,13 +754,12 @@ class GeneticAlgorithm(BaseAlgorithm):
             }
         )
     
-    def _create_empty_result(self, start_time: float) -> OptimizationResult:
+    def _create_empty_result(self, start_time: float) -> CuttingResult:
         """Create empty result for failed optimization"""
-        return OptimizationResult(
+        return CuttingResult(
             placed_shapes=[],
             efficiency_percentage=0.0,
             total_stock_used=0,
             algorithm_used=self.name,
-            computation_time=time.time() - start_time,
-            success=False
+            computation_time=time.time() - start_time
         )

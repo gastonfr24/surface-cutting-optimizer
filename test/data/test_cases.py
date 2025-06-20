@@ -3,8 +3,8 @@ Test cases with known optimal solutions for Surface Cutting Optimizer
 """
 
 from typing import Dict, List, Tuple, Any
-from ..core.models import Stock, Order, MaterialType, Priority
-from ..core.geometry import Rectangle, Circle
+from surface_optimizer.core.models import Stock, Order, MaterialType, Priority
+from surface_optimizer.core.geometry import Rectangle, Circle
 
 
 def get_all_test_cases() -> Dict[str, Tuple[List[Stock], List[Order], Dict[str, Any]]]:

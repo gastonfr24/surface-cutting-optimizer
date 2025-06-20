@@ -158,6 +158,22 @@ class OptimizationLogger:
             "total_time_seconds": round(total_time, 3),
             "success_rate": len(completed_ops) / len(self.operation_logs) * 100 if self.operation_logs else 0
         }
+    
+    def info(self, message: str):
+        """Log info message"""
+        self.logger.info(message)
+    
+    def debug(self, message: str):
+        """Log debug message"""
+        self.logger.debug(message)
+    
+    def warning(self, message: str):
+        """Log warning message"""
+        self.logger.warning(message)
+    
+    def error(self, message: str):
+        """Log error message"""
+        self.logger.error(message)
 
 
 def timed_operation(operation_name: str, logger: OptimizationLogger):
