@@ -48,32 +48,29 @@ __all__ = [
 
 def auto_select_algorithm(stocks, orders, priority='balanced'):
     """
-    🤖 Automatically select the best algorithm based on problem complexity
+    🤖 Intelligent Algorithm Selection
     
-    Args:
-        stocks: List of available stock materials
-        orders: List of orders to fulfill  
-        priority: 'speed', 'balanced', 'quality', 'maximum'
-        
-    Returns:
-        Tuple of (algorithm_instance, explanation, expected_metrics)
+    Automatically selects the best algorithm based on:
+    - Problem complexity (pieces × stocks)
+    - Material utilization ratio
+    - Priority preference (speed/balanced/quality/maximum)
     """
-    # Calculate problem complexity
+    
     total_pieces = sum(order.quantity for order in orders)
     total_stocks = len(stocks)
     complexity_score = total_pieces * total_stocks
     
     # Calculate utilization ratio
-    total_stock_area = sum(stock.area for stock in stocks)
     total_demand_area = sum(order.total_area for order in orders)
+    total_stock_area = sum(stock.area for stock in stocks)
     utilization_ratio = total_demand_area / total_stock_area if total_stock_area > 0 else 0
     
     if priority == 'speed':
-        if total_pieces <= 20:
+        if total_pieces <= 15:
             return (
-                FirstFitAlgorithm(),
-                "🚀 First Fit - Ultra-fast for small problems",
-                {'expected_efficiency': '35-55%', 'expected_time': '<0.1s'}
+                BestFitAlgorithm(),  # Changed from FirstFit - better efficiency
+                "⚡ Best Fit - Fast with good efficiency",
+                {'expected_efficiency': '50-70%', 'expected_time': '<0.5s'}
             )
         else:
             return (
@@ -83,11 +80,17 @@ def auto_select_algorithm(stocks, orders, priority='balanced'):
             )
     
     elif priority == 'quality':
-        if complexity_score <= 100:
+        if complexity_score <= 50:
+            return (
+                BestFitAlgorithm(),  # For small problems, BestFit is efficient enough
+                "🎯 Best Fit - Good efficiency for small problems",
+                {'expected_efficiency': '60-75%', 'expected_time': '<1s'}
+            )
+        elif complexity_score <= 200:
             return (
                 BottomLeftAlgorithm(),
                 "🎯 Bottom Left - Better placement optimization",
-                {'expected_efficiency': '60-80%', 'expected_time': '<5s'}
+                {'expected_efficiency': '65-80%', 'expected_time': '<5s'}
             )
         else:
             return (
@@ -97,7 +100,13 @@ def auto_select_algorithm(stocks, orders, priority='balanced'):
             )
     
     elif priority == 'maximum':
-        if utilization_ratio > 0.8:  # Tightly packed
+        if complexity_score <= 100:
+            return (
+                GeneticAlgorithm(),
+                "🧬 Genetic Algorithm - Maximum efficiency",
+                {'expected_efficiency': '75-90%', 'expected_time': '5-30s'}
+            )
+        elif utilization_ratio > 0.8:  # Tightly packed
             return (
                 SimulatedAnnealingAlgorithm(),
                 "🔥 Simulated Annealing - Maximum efficiency for tight packing",
@@ -110,20 +119,26 @@ def auto_select_algorithm(stocks, orders, priority='balanced'):
                 {'expected_efficiency': '75-90%', 'expected_time': '30-180s'}
             )
     
-    else:  # balanced
-        if total_pieces <= 5:
+    else:  # balanced (DEFAULT - most important)
+        if total_pieces <= 3:
             return (
-                BestFitAlgorithm(),
-                "🎯 Best Fit - Good balance for small problems",
-                {'expected_efficiency': '50-70%', 'expected_time': '<0.5s'}
+                BestFitAlgorithm(),  # Small problems - BestFit is perfect
+                "🎯 Best Fit - Excellent for small problems", 
+                {'expected_efficiency': '60-75%', 'expected_time': '<0.1s'}
             )
-        elif total_pieces <= 20:
+        elif total_pieces <= 10:
+            return (
+                BestFitAlgorithm(),  # Still good for medium-small
+                "🎯 Best Fit - Good balance for medium problems",
+                {'expected_efficiency': '55-70%', 'expected_time': '<0.5s'}
+            )
+        elif total_pieces <= 25:
             return (
                 BottomLeftAlgorithm(),
-                "📍 Bottom Left - Quality focus for medium problems",
+                "📍 Bottom Left - Quality focus for larger problems",
                 {'expected_efficiency': '60-80%', 'expected_time': '1-10s'}
             )
-        elif complexity_score <= 200:
+        elif complexity_score <= 300:
             return (
                 GeneticAlgorithm(),
                 "🧬 Genetic Algorithm - Best balance for complex problems",
@@ -131,7 +146,7 @@ def auto_select_algorithm(stocks, orders, priority='balanced'):
             )
         else:
             return (
-                BestFitAlgorithm(),
+                BestFitAlgorithm(),  # Fallback to speed for very complex
                 "⚡ Best Fit - Time-limited for very complex problems", 
                 {'expected_efficiency': '55-75%', 'expected_time': '<5s'}
             )
