@@ -85,6 +85,10 @@ class GeneticAlgorithm(BaseAlgorithm):
         """
         start_time = time.time()
         
+        # Handle empty inputs
+        if not stocks or not orders:
+            return self._create_empty_result(start_time)
+        
         # Convert objects to dictionary format for internal processing
         stocks_dict = [
             {
@@ -350,16 +354,16 @@ class GeneticAlgorithm(BaseAlgorithm):
         for stock_idx, stock in enumerate(stocks):
             # Calculate current occupancy for this stock
             occupied_rects = [
-                Rectangle(gene['x'], gene['y'], gene['width'], gene['height'])
+                Rectangle(gene['width'], gene['height'], gene['x'], gene['y'])
                 for gene in existing_chromosome
                 if gene['stock_index'] == stock_idx
             ]
             
             # Try different positions
-            for x in range(0, stock['width'] - piece['width'] + 1, 10):  # Coarse grid
-                for y in range(0, stock['height'] - piece['height'] + 1, 10):
+            for x in range(0, int(stock['width'] - piece['width']) + 1, 10):  # Coarse grid
+                for y in range(0, int(stock['height'] - piece['height']) + 1, 10):
                     
-                    piece_rect = Rectangle(x, y, piece['width'], piece['height'])
+                    piece_rect = Rectangle(piece['width'], piece['height'], x, y)
                     
                     if self._is_valid_placement(piece_rect, occupied_rects, stock):
                         # Calculate waste for this placement
@@ -384,6 +388,9 @@ class GeneticAlgorithm(BaseAlgorithm):
     def _find_random_placement(self, piece: Dict, stocks: List[Dict],
                              existing_chromosome: List[Dict]) -> Optional[Dict]:
         """Find random valid placement"""
+        if not stocks:
+            return None
+            
         max_attempts = 50
         
         for _ in range(max_attempts):
@@ -393,13 +400,13 @@ class GeneticAlgorithm(BaseAlgorithm):
             if piece['width'] > stock['width'] or piece['height'] > stock['height']:
                 continue
             
-            x = random.randint(0, stock['width'] - piece['width'])
-            y = random.randint(0, stock['height'] - piece['height'])
+            x = random.randint(0, int(stock['width'] - piece['width']))
+            y = random.randint(0, int(stock['height'] - piece['height']))
             
-            piece_rect = Rectangle(x, y, piece['width'], piece['height'])
+            piece_rect = Rectangle(piece['width'], piece['height'], x, y)
             
             occupied_rects = [
-                Rectangle(gene['x'], gene['y'], gene['width'], gene['height'])
+                Rectangle(gene['width'], gene['height'], gene['x'], gene['y'])
                 for gene in existing_chromosome
                 if gene['stock_index'] == stock_idx
             ]
@@ -535,7 +542,7 @@ class GeneticAlgorithm(BaseAlgorithm):
         # Check for overlaps within each stock
         for stock_idx, placements in stock_placements.items():
             for i, gene1 in enumerate(placements):
-                rect1 = Rectangle(gene1['x'], gene1['y'], gene1['width'], gene1['height'])
+                rect1 = Rectangle(gene1['width'], gene1['height'], gene1['x'], gene1['y'])
                 
                 # Check bounds
                 stock = stocks[stock_idx]
@@ -545,7 +552,7 @@ class GeneticAlgorithm(BaseAlgorithm):
                 
                 # Check overlaps with other pieces
                 for j, gene2 in enumerate(placements[i+1:], i+1):
-                    rect2 = Rectangle(gene2['x'], gene2['y'], gene2['width'], gene2['height'])
+                    rect2 = Rectangle(gene2['width'], gene2['height'], gene2['x'], gene2['y'])
                     if self._rectangles_overlap(rect1, rect2):
                         penalties += 1.0
         

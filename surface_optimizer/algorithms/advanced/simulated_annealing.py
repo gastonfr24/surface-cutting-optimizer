@@ -6,6 +6,7 @@ Advanced optimization using simulated annealing metaheuristic
 import random
 import copy
 import math
+import time
 from typing import List, Tuple, Optional, Dict, Any
 
 from ...core.models import Stock, Order, CuttingResult, OptimizationConfig, PlacedShape
@@ -80,6 +81,8 @@ class SimulatedAnnealingAlgorithm(BaseAlgorithm):
                 config: OptimizationConfig) -> CuttingResult:
         """Optimize using simulated annealing with auto-scaling"""
         
+        start_time = time.time()
+        
         # Auto-scale parameters
         (self.initial_temperature, self.min_temperature, 
          self.max_iterations, self.iterations_per_temp) = self._auto_scale_parameters(
@@ -148,6 +151,9 @@ class SimulatedAnnealingAlgorithm(BaseAlgorithm):
             
             # Convert best solution to result
             result = self._solution_to_result(best_solution, stocks, expanded_orders, orders)
+            
+            # Set computation time
+            result.computation_time = time.time() - start_time
             
             # Set metadata
             result.metadata = {

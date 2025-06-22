@@ -200,8 +200,8 @@ class Rectangle(Shape):
             min1, max1 = min(proj1), max(proj1)
             min2, max2 = min(proj2), max(proj2)
             
-            # Check for separation
-            if max1 < min2 or max2 < min1:
+            # Check for separation (touching edges don't count as overlap)
+            if max1 <= min2 or max2 <= min1:
                 return False  # Separating axis found
         
         return True  # No separating axis found, they overlap
@@ -365,8 +365,14 @@ class Polygon(Shape):
         """Check if point is inside polygon using ray casting"""
         vertices = self._get_transformed_vertices()
         n = len(vertices)
-        inside = False
         
+        # First check if point is exactly on a vertex
+        for vx, vy in vertices:
+            if abs(x - vx) < 1e-10 and abs(y - vy) < 1e-10:
+                return True
+        
+        # Ray casting algorithm
+        inside = False
         p1x, p1y = vertices[0]
         for i in range(1, n + 1):
             p2x, p2y = vertices[i % n]

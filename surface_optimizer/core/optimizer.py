@@ -219,6 +219,7 @@ class Optimizer:
             "total_optimizations": len(results),
             "average_efficiency": sum(r.efficiency_percentage for r in results) / len(results),
             "average_computation_time": sum(r.computation_time for r in results) / len(results),
+            "total_time": sum(r.computation_time for r in results),
             "total_stocks_used": sum(r.total_stock_used for r in results),
             "total_orders_fulfilled": sum(r.total_orders_fulfilled for r in results),
             "total_cost": sum(r.total_cost for r in results),
@@ -233,7 +234,7 @@ class Optimizer:
     def clear_history(self):
         """Clear optimization history"""
         self.optimization_history.clear()
-        self.logger.log_info("Optimization history cleared")
+        self.logger.info("Optimization history cleared")
     
     def __str__(self):
         algorithm_name = self.algorithm.name if self.algorithm else "None"

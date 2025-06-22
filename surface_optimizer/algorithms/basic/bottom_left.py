@@ -14,7 +14,12 @@ class BottomLeftAlgorithm(BaseAlgorithm):
     
     def __init__(self):
         super().__init__()
-        self.name = "Bottom-Left Fill"
+        self.name = "bottom_left"
+        self.description = """
+        Bottom-Left Fill algorithm that places pieces at the lowest and
+        leftmost valid position. Good for minimizing waste at edges.
+        """
+        self.supports_rotation = True
     
     def optimize(self, stocks: List[Stock], orders: List[Order], 
                 config: OptimizationConfig) -> CuttingResult:
