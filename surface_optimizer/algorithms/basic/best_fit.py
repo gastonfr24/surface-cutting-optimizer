@@ -1,29 +1,33 @@
 """
-Best Fit Algorithm - Basic implementation using First Fit with best stock selection
+Best Fit Algorithm - Advanced implementation with intelligent placement
 """
 
 import time
-from typing import List
+import copy
+from typing import List, Tuple, Optional
 from ...core.models import Stock, Order, CuttingResult, OptimizationConfig, PlacedShape
 from ...core.geometry import Rectangle
 from ..base import BaseAlgorithm
 
 
 class BestFitAlgorithm(BaseAlgorithm):
-    """Best Fit algorithm - chooses stock with smallest remaining area that fits the piece"""
+    """Advanced Best Fit algorithm with intelligent placement"""
     
     def __init__(self):
         super().__init__()
         self.name = "best_fit"
         self.description = """
-        Best Fit algorithm that places each piece in the stock with the
-        smallest remaining area that can accommodate it. Minimizes waste.
+        Advanced Best Fit algorithm that:
+        - Chooses stock with smallest waste for each piece
+        - Uses intelligent bottom-left placement
+        - Handles rotations optimally
+        - Minimizes material waste through smart positioning
         """
         self.supports_rotation = True
     
     def optimize(self, stocks: List[Stock], orders: List[Order], 
                 config: OptimizationConfig) -> CuttingResult:
-        """Best Fit optimization - basic implementation"""
+        """Advanced Best Fit optimization with intelligent placement"""
         
         start_time = time.time()
         
@@ -38,12 +42,12 @@ class BestFitAlgorithm(BaseAlgorithm):
         processed_orders = self.preprocess_orders(orders, config)
         processed_stocks = self.preprocess_stocks(stocks, config)
         
-        # Track used area for each stock
-        stock_used_area = {stock.id: 0.0 for stock in processed_stocks}
+        # Track occupied areas for each stock
+        stock_occupied = {stock.id: [] for stock in processed_stocks}
         placed_shapes = []
         unfulfilled_orders = []
         
-        # Expand orders by quantity
+        # Expand orders by quantity and sort by area (largest first)
         expanded_orders = []
         for order in processed_orders:
             for i in range(order.quantity):
@@ -56,56 +60,51 @@ class BestFitAlgorithm(BaseAlgorithm):
                 )
                 expanded_orders.append(expanded_order)
         
-        # Place each piece using best fit strategy
+        # Sort by area (largest first) for better packing efficiency
+        expanded_orders.sort(key=lambda o: o.shape.area(), reverse=True)
+        
+        # Place each piece using advanced best fit strategy
         for order in expanded_orders:
-            best_stock = None
-            best_remaining_area = float('inf')
+            best_placement = None
+            best_waste = float('inf')
             
-            # Find the stock with smallest remaining area that fits this piece
+            # Try each compatible stock
             for stock in processed_stocks:
                 # Check material compatibility
                 if stock.material_type != order.material_type:
                     continue
                 
-                # Check if piece fits
-                if isinstance(order.shape, Rectangle):
-                    piece_area = order.shape.area()
+                # Find best placement in this stock
+                placement = self._find_best_placement(
+                    stock, order.shape, stock_occupied[stock.id], config
+                )
+                
+                if placement:
+                    # Calculate waste for this placement
+                    waste = self._calculate_placement_waste(
+                        stock, placement, stock_occupied[stock.id]
+                    )
                     
-                    # Try without rotation
-                    if (order.shape.width <= stock.width and 
-                        order.shape.height <= stock.height):
-                        
-                        remaining_area = stock.area - stock_used_area[stock.id] - piece_area
-                        if remaining_area >= 0 and remaining_area < best_remaining_area:
-                            best_stock = stock
-                            best_remaining_area = remaining_area
-                    
-                    # Try with rotation if enabled
-                    if (config.allow_rotation and 
-                        order.shape.width != order.shape.height and
-                        order.shape.height <= stock.width and 
-                        order.shape.width <= stock.height):
-                        
-                        remaining_area = stock.area - stock_used_area[stock.id] - piece_area
-                        if remaining_area >= 0 and remaining_area < best_remaining_area:
-                            best_stock = stock
-                            best_remaining_area = remaining_area
+                    if waste < best_waste:
+                        best_waste = waste
+                        best_placement = {
+                            'stock': stock,
+                            'position': placement['position'],
+                            'rotated': placement['rotated'],
+                            'shape': placement['shape']
+                        }
             
-            # Place piece in best stock if found
-            if best_stock:
-                # Create placed shape (simplified placement at origin)
+            # Place piece in best location if found
+            if best_placement:
+                # Create properly positioned shape
                 placed_shape = PlacedShape(
                     order_id=order.id,
-                    shape=Rectangle(
-                        x=0.0, y=0.0,  # Simplified placement
-                        width=order.shape.width, 
-                        height=order.shape.height
-                    ),
-                    stock_id=best_stock.id
+                    shape=best_placement['shape'],
+                    stock_id=best_placement['stock'].id
                 )
                 
                 placed_shapes.append(placed_shape)
-                stock_used_area[best_stock.id] += order.shape.area()
+                stock_occupied[best_placement['stock'].id].append(best_placement['shape'])
             else:
                 unfulfilled_orders.append(order)
         
@@ -131,4 +130,115 @@ class BestFitAlgorithm(BaseAlgorithm):
             result.efficiency_percentage = 0.0
         
         result.computation_time = time.time() - start_time
-        return result 
+        return result
+    
+    def _find_best_placement(self, stock: Stock, shape: Rectangle, 
+                           occupied_shapes: List[Rectangle], 
+                           config: OptimizationConfig) -> Optional[dict]:
+        """Find the best placement position for a shape in a stock"""
+        
+        orientations = [shape]
+        
+        # Add rotated version if rotation is allowed
+        if config.allow_rotation and shape.width != shape.height:
+            rotated = Rectangle(
+                x=shape.x, y=shape.y,
+                width=shape.height, height=shape.width
+            )
+            orientations.append(rotated)
+        
+        best_placement = None
+        best_y = float('inf')
+        best_x = float('inf')
+        
+        for i, oriented_shape in enumerate(orientations):
+            # Check if shape fits in stock at all
+            if (oriented_shape.width > stock.width or 
+                oriented_shape.height > stock.height):
+                continue
+            
+            # Try bottom-left placement
+            position = self._find_bottom_left_position(
+                stock, oriented_shape, occupied_shapes
+            )
+            
+            if position:
+                x, y = position
+                
+                # Prefer lower positions, then leftmost
+                if y < best_y or (y == best_y and x < best_x):
+                    placed_shape = Rectangle(
+                        x=x, y=y,
+                        width=oriented_shape.width,
+                        height=oriented_shape.height
+                    )
+                    
+                    best_placement = {
+                        'position': (x, y),
+                        'rotated': i > 0,
+                        'shape': placed_shape
+                    }
+                    best_y = y
+                    best_x = x
+        
+        return best_placement
+    
+    def _find_bottom_left_position(self, stock: Stock, shape: Rectangle,
+                                 occupied_shapes: List[Rectangle]) -> Optional[Tuple[float, float]]:
+        """Find bottom-left position for a shape"""
+        
+        # Generate candidate positions
+        candidate_positions = [(0, 0)]  # Start with bottom-left corner
+        
+        # Add positions based on existing shapes
+        for occupied in occupied_shapes:
+            # Right edge of existing shape
+            candidate_positions.append((occupied.x + occupied.width, occupied.y))
+            # Top edge of existing shape
+            candidate_positions.append((occupied.x, occupied.y + occupied.height))
+            # Top-right corner
+            candidate_positions.append((occupied.x + occupied.width, occupied.y + occupied.height))
+        
+        # Sort by Y first (bottom), then X (left)
+        candidate_positions.sort(key=lambda pos: (pos[1], pos[0]))
+        
+        # Try each position
+        for x, y in candidate_positions:
+            # Check if shape fits within stock bounds
+            if (x + shape.width <= stock.width and 
+                y + shape.height <= stock.height):
+                
+                # Check for overlaps with existing shapes
+                test_shape = Rectangle(x=x, y=y, width=shape.width, height=shape.height)
+                
+                if not self._has_overlap(test_shape, occupied_shapes):
+                    return (x, y)
+        
+        return None
+    
+    def _has_overlap(self, test_shape: Rectangle, occupied_shapes: List[Rectangle]) -> bool:
+        """Check if test shape overlaps with any occupied shape"""
+        
+        for occupied in occupied_shapes:
+            if self._rectangles_overlap(test_shape, occupied):
+                return True
+        return False
+    
+    def _rectangles_overlap(self, rect1: Rectangle, rect2: Rectangle) -> bool:
+        """Check if two rectangles overlap"""
+        
+        return not (rect1.x + rect1.width <= rect2.x or
+                   rect2.x + rect2.width <= rect1.x or
+                   rect1.y + rect1.height <= rect2.y or
+                   rect2.y + rect2.height <= rect1.y)
+    
+    def _calculate_placement_waste(self, stock: Stock, placement: dict,
+                                 occupied_shapes: List[Rectangle]) -> float:
+        """Calculate waste introduced by a placement"""
+        
+        # Simple waste calculation: remaining area in stock
+        used_area = placement['shape'].area()
+        for occupied in occupied_shapes:
+            used_area += occupied.area()
+        
+        return stock.area - used_area 
