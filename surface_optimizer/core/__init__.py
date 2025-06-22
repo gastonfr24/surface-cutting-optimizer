@@ -3,7 +3,7 @@ Core module for Surface Cutting Optimizer
 Contains fundamental classes and utilities
 """
 
-from .models import Stock, Order, CuttingResult, PlacedShape, MaterialType, Priority, OptimizationConfig
+from .models import Stock, Order, CuttingResult, PlacedShape, MaterialType, Priority, OptimizationConfig, OrderSortCriteria
 from .geometry import Shape, Rectangle, Circle, Polygon
 from .optimizer import Optimizer
 from .exceptions import (
@@ -22,6 +22,7 @@ __all__ = [
     "MaterialType",
     "Priority",
     "OptimizationConfig",
+    "OrderSortCriteria",
     "Shape",
     "Rectangle",
     "Circle", 

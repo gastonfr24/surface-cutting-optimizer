@@ -1,0 +1,6 @@
+stock_id,width,height,material,cost
+PANEL_A,1200,800,Metal,25.50
+PANEL_B,1000,600,Metal,18.75
+PANEL_C,800,600,Metal,15.00
+PANEL_D,1500,900,Metal,35.00
+PANEL_E,900,700,Metal,22.00 

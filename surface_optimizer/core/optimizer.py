@@ -47,6 +47,25 @@ class Optimizer:
         })
         
         try:
+            # Log initialization
+            self.logger.info("📊 OPTIMIZATION ANALYSIS:")
+            
+            # Calculate areas
+            total_stock_area = sum(stock.area for stock in stocks)
+            total_demand_area = sum(order.total_area for order in orders)
+            utilization = (total_demand_area / total_stock_area * 100) if total_stock_area > 0 else 0
+            
+            self.logger.info(f"   • Stock panels: {len(stocks)} ({total_stock_area:,.0f} mm²)")
+            self.logger.info(f"   • Orders: {len(orders)} ({total_demand_area:,.0f} mm²)")
+            self.logger.info(f"   • Theoretical utilization: {utilization:.1f}%")
+            
+            if utilization > 100:
+                self.logger.warning(f"   ⚠️  Demand exceeds available stock by {utilization - 100:.1f}%")
+            elif utilization > 85:
+                self.logger.info(f"   ⚡ High utilization - optimization will be challenging")
+            else:
+                self.logger.info(f"   ✅ Sufficient stock available")
+            
             # Validate configuration
             config_issues = self.config.validate()
             if config_issues:

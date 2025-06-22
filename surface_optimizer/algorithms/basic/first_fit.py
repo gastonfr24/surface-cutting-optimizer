@@ -108,8 +108,16 @@ class FirstFitAlgorithm(BaseAlgorithm):
         if not stocks or not orders:
             raise ValueError("Stocks and orders cannot be empty")
         
-        logger.info(f"Starting First Fit optimization")
-        logger.info(f"Stocks: {len(stocks)}, Orders: {len(orders)}")
+        logger.info(f"🔧 FIRST FIT CONFIGURATION:")
+        logger.info(f"   • Rotation enabled: {config.allow_rotation}")
+        logger.info(f"   • Priority processing: {config.prioritize_orders}")
+        logger.info(f"   • Order sort criteria: {config.order_sort_criteria.value}")
+        if config.secondary_sort_criteria:
+            logger.info(f"   • Secondary sort: {config.secondary_sort_criteria.value}")
+        
+        logger.info(f"🚀 Starting First Fit optimization...")
+        logger.info(f"   • Processing {len(stocks)} stock panels")
+        logger.info(f"   • Processing {len(orders)} orders")
         
         # Initialize result
         placed_shapes = []
@@ -120,7 +128,8 @@ class FirstFitAlgorithm(BaseAlgorithm):
         working_stocks = []
         for i, stock in enumerate(stocks):
             working_stocks.append({
-                'id': i,
+                'id': stock.id,  # Use original stock ID instead of index
+                'index': i,      # Keep index for internal calculations
                 'width': stock.width,
                 'height': stock.height, 
                 'cost': stock.cost_per_unit,
@@ -128,8 +137,11 @@ class FirstFitAlgorithm(BaseAlgorithm):
                 'occupied_areas': []  # List of placed rectangles
             })
         
+        # Preprocess orders (sort by priority and configured criteria)
+        processed_orders = self.preprocess_orders(orders, config)
+        
         # Process each order - convert Order objects to working format
-        for order in orders:
+        for order in processed_orders:
             quantity = order.quantity
             order_id = order.id
             
@@ -199,8 +211,11 @@ class FirstFitAlgorithm(BaseAlgorithm):
         
         # Calculate efficiency
         total_placed_area = sum(shape['width'] * shape['height'] for shape in placed_shapes)
+        
+        # Create a mapping from stock_id to working_stock for efficiency calculation
+        stock_id_to_working = {ws['id']: ws for ws in working_stocks}
         total_stock_area = sum(
-            working_stocks[stock_id]['width'] * working_stocks[stock_id]['height']
+            stock_id_to_working[stock_id]['width'] * stock_id_to_working[stock_id]['height']
             for stock_id in used_stocks
         )
         
@@ -220,7 +235,7 @@ class FirstFitAlgorithm(BaseAlgorithm):
             placed_shape = PlacedShape(
                 order_id=shape_data['piece_id'],
                 shape=rect,
-                stock_id=str(shape_data['stock_id']),
+                stock_id=shape_data['stock_id'],  # Already a string (original stock ID)
                 rotation_applied=90.0 if shape_data['rotated'] else 0.0
             )
             placed_shape_objects.append(placed_shape)
@@ -237,11 +252,28 @@ class FirstFitAlgorithm(BaseAlgorithm):
             )
             unfulfilled_order_objects.append(order)
         
-        logger.info(f"Optimization completed:")
-        logger.info(f"  - Placed pieces: {len(placed_shapes)}/{total_pieces}")
-        logger.info(f"  - Efficiency: {efficiency:.1f}%")
-        logger.info(f"  - Stocks used: {len(used_stocks)}")
-        logger.info(f"  - Time: {computation_time:.3f}s")
+        logger.info(f"✅ OPTIMIZATION COMPLETED:")
+        logger.info(f"   • Pieces placed: {len(placed_shapes)}/{total_pieces}")
+        logger.info(f"   • Efficiency: {efficiency:.1f}%")
+        logger.info(f"   • Stocks used: {len(used_stocks)}/{len(stocks)}")
+        logger.info(f"   • Computation time: {computation_time:.3f}s")
+        
+        # Add efficiency interpretation
+        if efficiency >= 80:
+            logger.info(f"   🌟 Excellent efficiency - minimal waste")
+        elif efficiency >= 60:
+            logger.info(f"   👍 Good efficiency - reasonable material usage")
+        elif efficiency >= 40:
+            logger.info(f"   ⚡ Moderate efficiency - consider other algorithms")
+        else:
+            logger.warning(f"   ⚠️  Low efficiency - manual optimization may be needed")
+            
+        # Log unfulfilled pieces
+        unfulfilled_count = len(unfulfilled_orders)
+        if unfulfilled_count > 0:
+            logger.warning(f"   ❌ {unfulfilled_count} pieces could not be placed")
+        else:
+            logger.info(f"   ✅ All pieces successfully placed")
         
         return CuttingResult(
             placed_shapes=placed_shape_objects,

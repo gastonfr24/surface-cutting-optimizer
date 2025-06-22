@@ -191,7 +191,7 @@ $RECYCLE.BIN/
 *.svg
 *.pdf
 *.dxf
-*.csv
+# *.csv
 
 # Demo outputs
 cutting_plan.png

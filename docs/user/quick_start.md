@@ -2,6 +2,21 @@
 
 🚀 **Empezar con Surface Cutting Optimizer en 5 minutos**
 
+## 🎯 Demos Rápidos (Recomendado)
+
+**¿Prefieres ver ejemplos funcionando?** Ejecuta los demos interactivos:
+
+```bash
+env/Scripts/activate  # Activar entorno virtual
+
+python demo/01_simple_csv_demo.py     # Flujo básico CSV 
+python demo/02_multi_stock_demo.py    # Múltiples paneles
+python demo/03_overflow_demo.py       # Manejo de capacidad 
+python demo/04_priority_sorting_demo.py  # Prioridades avanzadas
+```
+
+📖 **Documentación completa de demos:** [demos.md](demos.md)
+
 ## 📦 Instalación
 
 ```bash

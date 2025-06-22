@@ -53,6 +53,18 @@ class Priority(Enum):
         raise ValueError(f"Unknown priority weight: {weight}")
 
 
+class OrderSortCriteria(Enum):
+    """Criteria for sorting orders when priorities are equal"""
+    AREA_DESC = "area_desc"           # Largest area first
+    AREA_ASC = "area_asc"             # Smallest area first  
+    DUE_DATE = "due_date"             # Earliest due date first
+    QUANTITY_DESC = "quantity_desc"   # Highest quantity first
+    QUANTITY_ASC = "quantity_asc"     # Lowest quantity first
+    ORDER_DATE = "order_date"         # Earliest order date first
+    CSV_ORDER = "csv_order"           # Original CSV order (no change)
+    CUSTOMER_ID = "customer_id"       # Alphabetical by customer
+
+
 class StockStatus(Enum):
     """Stock availability status"""
     AVAILABLE = "available"
@@ -479,6 +491,10 @@ class OptimizationConfig:
     prioritize_orders: bool = True
     algorithm_name: str = "bottom_left"
     
+    # Order sorting configuration
+    order_sort_criteria: OrderSortCriteria = OrderSortCriteria.AREA_DESC  # Default: area descending
+    secondary_sort_criteria: Optional[OrderSortCriteria] = OrderSortCriteria.DUE_DATE  # Secondary: due date
+    
     # Advanced options
     enable_nesting: bool = False  # Allow shapes inside other shapes
     minimize_cuts: bool = False  # Prefer fewer cuts over efficiency
@@ -527,6 +543,8 @@ class OptimizationConfig:
             "max_computation_time": self.max_computation_time,
             "prioritize_orders": self.prioritize_orders,
             "algorithm_name": self.algorithm_name,
+            "order_sort_criteria": self.order_sort_criteria.value,
+            "secondary_sort_criteria": self.secondary_sort_criteria.value if self.secondary_sort_criteria else None,
             "enable_nesting": self.enable_nesting,
             "minimize_cuts": self.minimize_cuts,
             "group_by_thickness": self.group_by_thickness,

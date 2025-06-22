@@ -64,6 +64,28 @@ surface_optimizer/
 
 ## 🚀 **Quick Start**
 
+### 🎯 Interactive Demos (Recommended)
+
+The fastest way to understand the library is through interactive demos:
+
+```bash
+# Clone and setup
+git clone https://github.com/gastonfr24/surface-cutting-optimizer.git
+cd surface-cutting-optimizer
+pip install -r requirements.txt
+pip install -e .
+
+# Activate environment and run demos
+env/Scripts/activate  # Windows (or source env/bin/activate on Linux/Mac)
+
+python demo/01_simple_csv_demo.py     # CSV workflow (2-3 min)
+python demo/02_multi_stock_demo.py    # Multiple panels (3-4 min)
+python demo/03_overflow_demo.py       # Capacity handling (2-3 min)  
+python demo/04_priority_sorting_demo.py  # Priority handling (1-2 min)
+```
+
+📖 **Complete demo documentation:** [docs/user/demos.md](docs/user/demos.md)
+
 ### Installation
 
 ```bash

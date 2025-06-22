@@ -14,49 +14,50 @@ from datetime import datetime
 class OptimizationLogger:
     """Custom logger for optimization operations"""
     
-    def __init__(self, name: str = "surface_optimizer", level: int = logging.INFO):
+    def __init__(self, name: str = "surface_optimizer", level: int = logging.INFO, 
+                 enable_file_logging: bool = True):
         self.logger = logging.getLogger(name)
         self.logger.setLevel(level)
+        self.enable_file_logging = enable_file_logging
         
-        # Avoid duplicate handlers
-        if not self.logger.handlers:
-            self._setup_handlers()
+        # Clear existing handlers to avoid conflicts
+        self.logger.handlers.clear()
+        self._setup_handlers()
         
         self.start_times = {}
         self.operation_logs = []
     
     def _setup_handlers(self):
-        """Setup console and file handlers"""
+        """Setup console and optionally file handlers"""
         
-        # Console handler
+        # Console handler - always enabled
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.INFO)
         
-        # File handler
-        log_dir = Path("logs")
-        log_dir.mkdir(exist_ok=True)
-        
-        file_handler = logging.FileHandler(
-            log_dir / f"optimizer_{datetime.now().strftime('%Y%m%d')}.log"
-        )
-        file_handler.setLevel(logging.DEBUG)
-        
-        # Formatters
+        # Console formatter - clean format for demos
         console_format = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            datefmt='%H:%M:%S'
+            '%(message)s'  # Simple format for demos
         )
-        
-        file_format = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
-        )
-        
         console_handler.setFormatter(console_format)
-        file_handler.setFormatter(file_format)
-        
         self.logger.addHandler(console_handler)
-        self.logger.addHandler(file_handler)
+        
+        # File handler - only if enabled
+        if self.enable_file_logging:
+            log_dir = Path("logs")
+            log_dir.mkdir(exist_ok=True)
+            
+            file_handler = logging.FileHandler(
+                log_dir / f"optimizer_{datetime.now().strftime('%Y%m%d')}.log"
+            )
+            file_handler.setLevel(logging.DEBUG)
+            
+            # Detailed file format
+            file_format = logging.Formatter(
+                '%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s',
+                datefmt='%Y-%m-%d %H:%M:%S'
+            )
+            file_handler.setFormatter(file_format)
+            self.logger.addHandler(file_handler)
     
     def start_operation(self, operation_name: str, details: Optional[Dict[str, Any]] = None):
         """Start timing an operation"""
@@ -174,6 +175,52 @@ class OptimizationLogger:
     def error(self, message: str):
         """Log error message"""
         self.logger.error(message)
+    
+    def demo_section(self, title: str, divider: str = "-"):
+        """Log demo section header"""
+        self.logger.info(f"\n{title}")
+        self.logger.info(divider * len(title))
+    
+    def demo_step(self, step_number: int, title: str):
+        """Log demo step"""
+        self.logger.info(f"\n🔄 STEP {step_number}: {title}")
+        self.logger.info("-" * (15 + len(title)))
+    
+    def demo_success(self, message: str):
+        """Log demo success message"""
+        self.logger.info(f"   ✅ {message}")
+    
+    def demo_warning(self, message: str):
+        """Log demo warning message"""
+        self.logger.warning(f"   ⚠️  {message}")
+    
+    def demo_info(self, message: str):
+        """Log demo info message"""
+        self.logger.info(f"   • {message}")
+    
+    def demo_analysis(self, title: str, data: dict):
+        """Log demo analysis data"""
+        self.logger.info(f"\n   📊 {title}:")
+        for key, value in data.items():
+            if isinstance(value, float):
+                self.logger.info(f"   • {key}: {value:.1f}")
+            else:
+                self.logger.info(f"   • {key}: {value}")
+                
+    def demo_result(self, efficiency: float, items_placed: int, total_items: int):
+        """Log demo optimization result"""
+        self.logger.info(f"\n   ✅ OPTIMIZATION COMPLETED:")
+        self.logger.info(f"   📊 Efficiency: {efficiency:.1f}%")
+        self.logger.info(f"   ✂️  Items placed: {items_placed}/{total_items}")
+        
+        if efficiency >= 80:
+            self.logger.info(f"   🌟 EXCELLENT efficiency! Minimal waste.")
+        elif efficiency >= 60:
+            self.logger.info(f"   👍 GOOD efficiency. Reasonable material usage.")
+        elif efficiency >= 40:
+            self.logger.info(f"   ⚡ MODERATE efficiency. Consider trying different algorithms.")
+        else:
+            self.logger.info(f"   ⚠️  LOW efficiency. Manual optimization may be needed.")
 
 
 def timed_operation(operation_name: str, logger: OptimizationLogger):
@@ -194,16 +241,23 @@ def timed_operation(operation_name: str, logger: OptimizationLogger):
     return decorator
 
 
-def setup_logging(level: int = logging.INFO, log_dir: str = "logs") -> OptimizationLogger:
+def setup_logging(level: int = logging.INFO, log_dir: str = "logs", 
+                  enable_file_logging: bool = True) -> OptimizationLogger:
     """Setup logging for the entire application"""
     
-    # Create log directory
-    Path(log_dir).mkdir(exist_ok=True)
+    # Create log directory only if file logging is enabled
+    if enable_file_logging:
+        Path(log_dir).mkdir(exist_ok=True)
     
     # Create main logger
-    logger = OptimizationLogger("surface_optimizer", level)
+    logger = OptimizationLogger("surface_optimizer", level, enable_file_logging)
     
     return logger
+
+
+def setup_demo_logging(level: int = logging.INFO) -> OptimizationLogger:
+    """Setup logging for demos - console only, no file output"""
+    return OptimizationLogger("surface_optimizer", level, enable_file_logging=False)
 
 
 # Global logger instance
@@ -214,7 +268,7 @@ def get_logger() -> OptimizationLogger:
     """Get the global logger instance"""
     global _global_logger
     if _global_logger is None:
-        _global_logger = setup_logging()
+        _global_logger = setup_logging(enable_file_logging=False)  # No file logging by default
     return _global_logger
 
 

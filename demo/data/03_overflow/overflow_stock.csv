@@ -1,0 +1,3 @@
+stock_id,width,height,material,cost
+SMALL_A,800,600,Metal,15.00
+SMALL_B,600,400,Metal,10.00 

@@ -65,8 +65,8 @@ def validate_stock_order_compatibility(stocks: List[Stock], orders: List[Order])
         total_order_area = sum(order.total_area for order in orders_list)
         
         if total_order_area > total_stock_area:
-            raise ValidationError(
-                f"Insufficient {material_type.value} stock area: {total_stock_area} < {total_order_area}"
-            )
+            # Allow overflow for demo purposes - just log a warning
+            print(f"⚠️  WARNING: Overflow detected - {material_type.value} demand ({total_order_area:,}) > stock ({total_stock_area:,})")
+            print(f"   Some orders will be discarded during optimization.")
     
     return True 

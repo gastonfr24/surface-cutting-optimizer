@@ -41,6 +41,14 @@ class MaterialReport:
     efficiency_by_material: Dict[str, float]
 
 
+@dataclass
+class CuttingCoordinatesReport:
+    """Cutting coordinates report for CNC/cutting machines"""
+    cutting_plan: List[Dict[str, Any]]
+    summary: Dict[str, Any]
+    generation_date: datetime
+
+
 class ReportGenerator:
     """Main report generator"""
     
@@ -141,4 +149,45 @@ class ReportGenerator:
             waste_by_material=waste_by_material,
             cost_by_material=cost_by_material,
             efficiency_by_material=efficiency_by_material
+        )
+    
+    def generate_cutting_coordinates_report(self, result: CuttingResult, 
+                                          stocks: List[Stock]) -> CuttingCoordinatesReport:
+        """Generate cutting coordinates report for CNC/cutting machines"""
+        
+        cutting_plan = []
+        
+        for i, placed_shape in enumerate(result.placed_shapes, 1):
+            # Get stock info
+            stock = next((s for s in stocks if s.id == placed_shape.stock_id), None)
+            
+            cutting_plan.append({
+                "cut_id": f"CUT_{i:03d}",
+                "order_id": placed_shape.order_id.split('_')[0],  # Remove _1 suffix
+                "stock_id": placed_shape.stock_id,
+                "stock_material": stock.material_type.value if stock else "Unknown",
+                "position_x_mm": round(placed_shape.shape.x, 1),
+                "position_y_mm": round(placed_shape.shape.y, 1),
+                "width_mm": round(placed_shape.shape.width, 1),
+                "height_mm": round(placed_shape.shape.height, 1),
+                "rotation_degrees": placed_shape.rotation_applied,
+                "area_mm2": round(placed_shape.shape.area(), 1),
+                "cutting_sequence": i,
+                "end_x_mm": round(placed_shape.shape.x + placed_shape.shape.width, 1),
+                "end_y_mm": round(placed_shape.shape.y + placed_shape.shape.height, 1)
+            })
+        
+        summary = {
+            "total_cuts": len(cutting_plan),
+            "efficiency": round(result.efficiency_percentage, 2),
+            "waste": round(100 - result.efficiency_percentage, 2),
+            "total_cost": round(result.total_cost, 2),
+            "sheets_used": result.total_stock_used,
+            "pieces_cut": result.total_orders_fulfilled
+        }
+        
+        return CuttingCoordinatesReport(
+            cutting_plan=cutting_plan,
+            summary=summary,
+            generation_date=datetime.now()
         )
