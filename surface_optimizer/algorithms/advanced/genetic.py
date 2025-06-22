@@ -92,6 +92,7 @@ class GeneticAlgorithm(BaseAlgorithm):
         # Convert objects to dictionary format for internal processing
         stocks_dict = [
             {
+                'id': stock.id,
                 'width': stock.width,
                 'height': stock.height,
                 'cost': stock.cost_per_unit,
@@ -729,16 +730,23 @@ class GeneticAlgorithm(BaseAlgorithm):
         for gene in best_individual.chromosome:
             # Create Rectangle shape for the placed piece
             rect = Rectangle(
-                x=gene['x'],
-                y=gene['y'],
                 width=gene['width'],
-                height=gene['height']
+                height=gene['height'],
+                x=gene['x'],
+                y=gene['y']
             )
+            
+            # Get the actual stock ID from the stocks list
+            stock_index = gene['stock_index']
+            if stock_index < len(stocks):
+                actual_stock_id = stocks[stock_index]['id']
+            else:
+                actual_stock_id = 'unknown'
             
             placed_shape = PlacedShape(
                 order_id=gene.get('piece_id', 'unknown'),
                 shape=rect,
-                stock_id=str(gene['stock_index']),
+                stock_id=actual_stock_id,
                 rotation_applied=90.0 if gene.get('rotated', False) else 0.0
             )
             placed_shape_objects.append(placed_shape)
