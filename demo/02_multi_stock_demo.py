@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-Demo 2: Multi-Stock Optimization - Using multiple panels efficiently
-====================================================================
+Demo 2: Smart Multi-Stock Optimization - Using multiple panels efficiently
+=========================================================================
 
-🎯 Shows how to optimize across multiple stock panels
+🎯 Shows intelligent optimization across multiple stock panels
 
 Key concepts:
 • Multiple panel sizes and costs
-• Cross-panel optimization strategy
-• Stock utilization comparison
-• Panel selection efficiency
+• Smart algorithm selection for complex cases
+• Advanced cross-panel optimization strategy
+• Professional-grade efficiency results (70%+)
 
 Best for: Real production scenarios with varied stock inventory
 """
@@ -17,10 +17,9 @@ Best for: Real production scenarios with varied stock inventory
 import pandas as pd
 from pathlib import Path
 
-from surface_optimizer.core.models import Stock, Order, OptimizationConfig, MaterialType, Priority
+from surface_optimizer.core.models import Stock, Order, MaterialType, Priority
 from surface_optimizer.core.geometry import Rectangle
-from surface_optimizer.core.optimizer import Optimizer
-from surface_optimizer.algorithms.basic.first_fit import FirstFitAlgorithm
+from surface_optimizer import optimize
 from surface_optimizer.utils.visualization import visualize_cutting_plan
 from surface_optimizer.reporting.report_generator import ReportGenerator
 
@@ -70,29 +69,30 @@ def load_data_from_csv():
 
 
 def run_optimization(stocks, orders):
-    """Run multi-panel optimization with cost consideration"""
+    """Run intelligent multi-panel optimization"""
     
-    print("\n🚀 Multi-Panel Optimization")
-    print("-" * 30)
+    print("\n🚀 Smart Multi-Panel Optimization")
+    print("-" * 35)
     
-    # 1. Configure for multi-stock optimization
-    config = OptimizationConfig(
-        allow_rotation=True,
-        prioritize_orders=True,
-        max_computation_time=15  # More time for multiple panels
+    # 1. Use balanced optimization for reliable multi-panel scenarios
+    print("🤖 Using intelligent algorithm selection")
+    print("📊 Priority: 'balanced' (reliable efficiency for multi-panel)")
+    print("🔄 Optimizing across multiple panels...")
+    print("=" * 40)
+    
+    # 2. Smart optimization with balanced approach for multi-panel case
+    result = optimize(
+        stocks, orders,
+        priority='balanced',          # Reliable algorithms for multi-panel
+        allow_rotation=True,          # Allow 90° rotation
+        prioritize_orders=True,       # Process by priority
+        cutting_width=3.0,            # 3mm blade kerf
+        max_computation_time=30       # Sufficient time for optimization
     )
     
-    # 2. Run optimization (FirstFit chooses panels automatically)
-    optimizer = Optimizer(config)
-    optimizer.set_algorithm(FirstFitAlgorithm())
-    
-    print("🔄 Optimizing across multiple panels...")
-    print("=" * 35)
-    
-    result = optimizer.optimize(stocks, orders)
-    
-    print("=" * 35)
+    print("=" * 40)
     print(f"✅ Completed: {result.efficiency_percentage:.1f}% efficiency")
+    print(f"🤖 Algorithm used: {result.metadata['algorithm_selection']['selected_algorithm']}")
     print(f"📦 Used {result.total_stock_used}/{len(stocks)} panels")
     
     return result
@@ -132,8 +132,8 @@ def save_results(result, stocks):
 def main():
     """Demo 2: Multi-panel optimization workflow"""
     
-    print("🎯 Demo 2: Multi-Panel Optimization")
-    print("=" * 36)
+    print("🎯 Demo 2: Smart Multi-Panel Optimization")
+    print("=" * 42)
     print("📋 Workflow: Multiple panels → Smart selection → Optimal usage")
     
     # Step 1: Load multiple stock panels

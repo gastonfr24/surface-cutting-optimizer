@@ -21,10 +21,11 @@ from .core.optimizer import Optimizer
 
 # Import algorithms for convenience
 from .algorithms.basic.first_fit import FirstFitAlgorithm
-from .algorithms.basic.best_fit import BestFitAlgorithm
+from .algorithms.basic.best_fit import BestFitAlgorithm  
 from .algorithms.basic.bottom_left import BottomLeftAlgorithm
 from .algorithms.advanced.genetic import GeneticAlgorithm
 from .algorithms.advanced.simulated_annealing import SimulatedAnnealingAlgorithm
+from .algorithms.advanced.hybrid_optimizer import HybridOptimizer
 
 __version__ = "1.0.0"
 __author__ = "Surface Cutting Optimizer Team"
@@ -86,7 +87,13 @@ def auto_select_algorithm(stocks, orders, priority='balanced'):
                 "🎯 Best Fit - Good efficiency for small problems",
                 {'expected_efficiency': '60-75%', 'expected_time': '<1s'}
             )
-        elif complexity_score <= 200:
+        elif complexity_score <= 150:
+            return (
+                HybridOptimizer(),
+                "🚀 Hybrid Optimizer - Multi-algorithm quality optimization",
+                {'expected_efficiency': '70-85%', 'expected_time': '2-8s'}
+            )
+        elif complexity_score <= 300:
             return (
                 BottomLeftAlgorithm(),
                 "🎯 Bottom Left - Better placement optimization",
@@ -100,7 +107,13 @@ def auto_select_algorithm(stocks, orders, priority='balanced'):
             )
     
     elif priority == 'maximum':
-        if complexity_score <= 100:
+        if complexity_score <= 80:
+            return (
+                HybridOptimizer(),
+                "🚀 Hybrid Optimizer - Maximum efficiency multi-algorithm",
+                {'expected_efficiency': '75-90%', 'expected_time': '3-10s'}
+            )
+        elif complexity_score <= 200:
             return (
                 GeneticAlgorithm(),
                 "🧬 Genetic Algorithm - Maximum efficiency",
@@ -206,7 +219,8 @@ def optimize(stocks, orders, priority='balanced', algorithm=None, config=None, *
             'best_fit': BestFitAlgorithm(),
             'bottom_left': BottomLeftAlgorithm(),
             'genetic': GeneticAlgorithm(),
-            'simulated_annealing': SimulatedAnnealingAlgorithm()
+            'simulated_annealing': SimulatedAnnealingAlgorithm(),
+            'hybrid': HybridOptimizer()
         }
         
         if algorithm in algorithm_map:

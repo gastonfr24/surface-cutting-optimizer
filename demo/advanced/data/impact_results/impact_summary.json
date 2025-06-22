@@ -1,0 +1,40 @@
+{
+  "impact_analysis": {
+    "absolute_improvement": "+34.2%",
+    "relative_improvement": "+99.9%",
+    "speed_improvement": "263.2x faster",
+    "best_achievable": "68.3% ('speed' mode)",
+    "theoretical_ceiling": "10.5%",
+    "efficiency_ratio": "650.0% of theoretical maximum"
+  },
+  "priority_comparison": {
+    "speed": {
+      "efficiency": 68.33333333333333,
+      "time": 0.0020008087158203125,
+      "algorithm": "best_fit",
+      "stocks_used": 1,
+      "orders_fulfilled": 5
+    },
+    "balanced": {
+      "efficiency": 68.33333333333333,
+      "time": 0.003648042678833008,
+      "algorithm": "best_fit",
+      "stocks_used": 1,
+      "orders_fulfilled": 5
+    },
+    "quality": {
+      "efficiency": 68.33333333333333,
+      "time": 0.0042803287506103516,
+      "algorithm": "best_fit",
+      "stocks_used": 1,
+      "orders_fulfilled": 5
+    },
+    "maximum": {
+      "efficiency": 68.33333333333333,
+      "time": 0.517411470413208,
+      "algorithm": "hybrid_optimizer",
+      "stocks_used": 1,
+      "orders_fulfilled": 5
+    }
+  }
+}

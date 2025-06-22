@@ -1,26 +1,25 @@
 #!/usr/bin/env python3
 """
-Demo 3: Overflow Handling - Order discarding when demand exceeds stock
-======================================================================
+Demo 3: Smart Overflow Handling - Order discarding when demand exceeds stock
+===========================================================================
 
-🎯 Shows how the optimizer handles insufficient stock capacity
+🎯 Shows how smart optimization handles insufficient stock capacity
 
 Key concepts:
 • Demand vs stock area analysis
-• Order discarding behavior  
-• Priority-based processing
+• Intelligent algorithm selection for priority handling
+• Smart priority-based processing
 • Unfulfilled order reporting
 
-Best for: Understanding capacity limits and order prioritization
+Best for: Understanding capacity limits and smart order prioritization
 """
 
 import pandas as pd
 from pathlib import Path
 
-from surface_optimizer.core.models import Stock, Order, OptimizationConfig, MaterialType, Priority
+from surface_optimizer.core.models import Stock, Order, MaterialType, Priority
 from surface_optimizer.core.geometry import Rectangle
-from surface_optimizer.core.optimizer import Optimizer
-from surface_optimizer.algorithms.basic.first_fit import FirstFitAlgorithm
+from surface_optimizer import optimize
 from surface_optimizer.utils.visualization import visualize_cutting_plan
 from surface_optimizer.reporting.report_generator import ReportGenerator
 
@@ -96,35 +95,36 @@ def analyze_demand_vs_stock(stocks, orders):
 
 
 def run_optimization(stocks, orders):
-    """Run optimization with priority-based processing"""
+    """Run smart optimization with priority-based processing"""
     
-    print("\n🚀 Priority-Based Optimization")
-    print("-" * 32)
+    print("\n🚀 Smart Priority-Based Optimization")
+    print("-" * 38)
     
-    # 1. Configure with priority processing enabled
-    config = OptimizationConfig(
-        allow_rotation=True,
-        prioritize_orders=True,        # Key: Process by priority first
-        max_computation_time=10
+    # 1. Use smart optimization with priority processing
+    print("🤖 Using intelligent algorithm selection")
+    print("📊 Priority: 'speed' (focused on priority handling)")
+    print("🔄 Processing orders by priority...")
+    print("=" * 35)
+    
+    # 2. Smart optimization with priority-focused processing
+    result = optimize(
+        stocks, orders,
+        priority='speed',             # Fast algorithms for priority demo
+        allow_rotation=True,          # Allow 90° rotation
+        prioritize_orders=True,       # Key: Process by priority first
+        cutting_width=3.0,            # 3mm blade kerf
+        max_computation_time=10       # Fast processing for overflow demo
     )
     
-    # 2. Run optimization (high priority orders get first chance)
-    optimizer = Optimizer(config)
-    optimizer.set_algorithm(FirstFitAlgorithm())
+    print("=" * 35)
     
-    print("🔄 Processing orders by priority...")
-    print("=" * 30)
-    
-    result = optimizer.optimize(stocks, orders)
-    
-    print("=" * 30)
-    
-    # 3. Show results summary
+    # 3. Show results summary with algorithm used
     total_pieces = sum(order.quantity for order in orders)
     placed_pieces = len(result.placed_shapes)
     discarded_pieces = len(result.unfulfilled_orders)
     
     print(f"✅ Completed: {result.efficiency_percentage:.1f}% efficiency")
+    print(f"🤖 Algorithm used: {result.metadata['algorithm_selection']['selected_algorithm']}")
     print(f"📦 Placed: {placed_pieces}/{total_pieces} pieces")
     print(f"❌ Discarded: {discarded_pieces} pieces")
     
@@ -224,9 +224,9 @@ def save_results(result, stocks):
 def main():
     """Demo 3: Overflow handling workflow - Understanding capacity limits"""
     
-    print("🎯 Demo 3: Overflow Handling")
-    print("=" * 29)
-    print("📋 Workflow: Capacity analysis → Priority processing → Results analysis")
+    print("🎯 Demo 3: Smart Overflow Handling")
+    print("=" * 35)
+    print("📋 Workflow: Capacity analysis → Smart priority processing → Results analysis")
     
     # Step 1: Load overflow test data  
     stocks, orders = load_data_from_csv()

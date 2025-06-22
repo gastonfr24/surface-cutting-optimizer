@@ -470,43 +470,76 @@ class GeneticAlgorithm(BaseAlgorithm):
         """
         Calculate multi-objective fitness for individual
         
-        Fitness components:
-        - Material efficiency (primary)
-        - Constraint violations (penalties)
-        - Stock utilization bonus
+        FIXED VERSION: Properly calculates placement efficiency
         """
         
         if not individual.chromosome:
             return 0.0
         
-        # Calculate material efficiency
-        total_piece_area = sum(
-            gene['width'] * gene['height'] 
-            for gene in individual.chromosome
-        )
+        # Validate all placements and count successfully placed pieces
+        valid_pieces = 0
+        total_piece_area = 0
+        used_stocks = set()
         
-        # Calculate used stock area
-        used_stocks = set(gene['stock_index'] for gene in individual.chromosome)
-        total_stock_area = sum(
-            stocks[i]['width'] * stocks[i]['height']
-            for i in used_stocks
-        )
+        # Group by stock to check placements
+        stock_placements = {}
+        for gene in individual.chromosome:
+            stock_idx = gene['stock_index']
+            if stock_idx >= len(stocks):
+                continue  # Invalid stock index
+                
+            if stock_idx not in stock_placements:
+                stock_placements[stock_idx] = []
+            stock_placements[stock_idx].append(gene)
         
-        if total_stock_area == 0:
+        # Validate each stock's placements
+        for stock_idx, placements in stock_placements.items():
+            stock = stocks[stock_idx]
+            valid_for_this_stock = []
+            
+            for gene in placements:
+                # Check if piece fits in stock bounds
+                if (gene['x'] + gene['width'] <= stock['width'] and
+                    gene['y'] + gene['height'] <= stock['height']):
+                    
+                    # Check for overlaps with already placed pieces
+                    piece_rect = Rectangle(gene['width'], gene['height'], gene['x'], gene['y'])
+                    has_overlap = False
+                    
+                    for other_gene in valid_for_this_stock:
+                        other_rect = Rectangle(other_gene['width'], other_gene['height'], 
+                                             other_gene['x'], other_gene['y'])
+                        if self._rectangles_overlap(piece_rect, other_rect):
+                            has_overlap = True
+                            break
+                    
+                    if not has_overlap:
+                        valid_for_this_stock.append(gene)
+                        valid_pieces += 1
+                        total_piece_area += gene['width'] * gene['height']
+                        used_stocks.add(stock_idx)
+        
+        # Calculate fitness
+        if valid_pieces == 0:
             return 0.0
         
-        efficiency = total_piece_area / total_stock_area
+        # Pieces placement ratio (primary factor)
+        piece_ratio = valid_pieces / len(individual.chromosome)
         
-        # Apply penalties for constraint violations
-        penalties = self._calculate_penalties(individual, stocks)
+        # Material efficiency (secondary factor)
+        if used_stocks:
+            total_stock_area = sum(stocks[i]['width'] * stocks[i]['height'] for i in used_stocks)
+            material_efficiency = total_piece_area / total_stock_area if total_stock_area > 0 else 0
+        else:
+            material_efficiency = 0
         
         # Stock utilization bonus (fewer stocks is better)
-        stock_bonus = 1.0 / (len(used_stocks) + 1)
+        stock_efficiency = 1.0 / (len(used_stocks) + 1) if used_stocks else 0
         
-        # Weighted fitness
-        fitness = efficiency * 0.8 + stock_bonus * 0.2 - penalties
+        # Combined fitness: prioritize placing all pieces
+        fitness = piece_ratio * 0.6 + material_efficiency * 0.3 + stock_efficiency * 0.1
         
-        return max(0.0, fitness)  # Ensure non-negative
+        return min(1.0, fitness)  # Cap at 1.0
     
     def _calculate_individual_efficiency(self, individual: Individual,
                                        stocks: List[Dict]) -> float:
@@ -739,15 +772,14 @@ class GeneticAlgorithm(BaseAlgorithm):
             # Get the actual stock ID from the stocks list
             stock_index = gene['stock_index']
             if stock_index < len(stocks):
-                actual_stock_id = stocks[stock_index]['id']
+                actual_stock_id = stocks[stock_index]['id']  # Use dictionary key
             else:
                 actual_stock_id = 'unknown'
             
             placed_shape = PlacedShape(
                 order_id=gene.get('piece_id', 'unknown'),
                 shape=rect,
-                stock_id=actual_stock_id,
-                rotation_applied=90.0 if gene.get('rotated', False) else 0.0
+                stock_id=actual_stock_id
             )
             placed_shape_objects.append(placed_shape)
         

@@ -1,23 +1,24 @@
 #!/usr/bin/env python3
 """
-Demo 4: Priority Sorting & Tie-Breaking - Advanced order processing
-===================================================================
+Demo 4: Smart Priority Sorting & Tie-Breaking - Advanced order processing
+=========================================================================
 
-🎯 Shows configurable tie-breaking when orders have same priority
+🎯 Shows smart configurable tie-breaking when orders have same priority
 
 Key concepts:
+• Smart algorithm selection with custom sorting
 • Priority-first processing (URGENT > HIGH > MEDIUM > LOW)
 • Configurable tie-breaking criteria (area, quantity, etc.)
 • Secondary sorting for complex scenarios
-• Processing order impact on results
+• Professional results with intelligent optimization
 
-Best for: Understanding advanced priority handling and optimization control
+Best for: Understanding advanced priority handling and smart optimization control
 """
 
 import pandas as pd
-from surface_optimizer.core.models import Stock, Order, OptimizationConfig, MaterialType, Priority, OrderSortCriteria
+from surface_optimizer.core.models import Stock, Order, MaterialType, Priority, OrderSortCriteria
 from surface_optimizer.core.geometry import Rectangle
-from surface_optimizer.algorithms.basic.first_fit import FirstFitAlgorithm
+from surface_optimizer import optimize
 
 def create_test_data():
     """Create test scenario with same-priority orders to demonstrate tie-breaking"""
@@ -54,12 +55,10 @@ def create_test_data():
     return [stock], orders
 
 def test_sorting_criteria(stocks, orders):
-    """Demonstrate different tie-breaking strategies"""
+    """Demonstrate different tie-breaking strategies with smart optimization"""
     
-    print("\n🧪 Tie-Breaking Strategy Comparison")
-    print("-" * 38)
-    
-    algorithm = FirstFitAlgorithm()
+    print("\n🧪 Smart Tie-Breaking Strategy Comparison")
+    print("-" * 44)
     
     # Define test configurations showing different tie-breaking approaches
     test_configs = [
@@ -72,27 +71,24 @@ def test_sorting_criteria(stocks, orders):
     
     for name, primary_criteria, secondary_criteria in test_configs:
         print(f"\n🔄 Strategy: {name}")
+        print(f"   🤖 Using smart algorithm selection with custom sorting")
         
-        # 1. Configure optimization with specific sorting
-        config = OptimizationConfig(
-            prioritize_orders=True,
-            order_sort_criteria=primary_criteria,
-            secondary_sort_criteria=secondary_criteria
+        # 1. Use smart optimization with specific sorting criteria
+        result = optimize(
+            stocks, orders,
+            priority='speed',                      # Fast algorithms for comparison
+            prioritize_orders=True,               # Enable priority processing
+            order_sort_criteria=primary_criteria, # Primary tie-breaking
+            secondary_sort_criteria=secondary_criteria, # Secondary tie-breaking
+            allow_rotation=True,
+            cutting_width=3.0
         )
         
-        # 2. Show processing order (priority first, then tie-breaking)
-        processed_orders = algorithm.preprocess_orders(orders, config)
-        processing_order = []
-        for order in processed_orders:
-            processing_order.append(f"{order.id}[{order.priority.name}]")
-        print(f"   Processing order: {' → '.join(processing_order)}")
-        
-        # 3. Run optimization and show results
-        result = algorithm.optimize(stocks, orders, config)
-        
+        # 2. Show results summary
         placed = [ps.order_id.split('_')[0] for ps in result.placed_shapes]
         unfulfilled = [uo.id.split('_')[0] for uo in result.unfulfilled_orders]
         
+        print(f"   📊 Algorithm: {result.metadata['algorithm_selection']['selected_algorithm']}")
         print(f"   ✅ Placed: {', '.join(placed)}")
         if unfulfilled:
             print(f"   ❌ Discarded: {', '.join(unfulfilled)}")
@@ -101,9 +97,9 @@ def test_sorting_criteria(stocks, orders):
 def main():
     """Demo 4: Advanced priority sorting with configurable tie-breaking"""
     
-    print("🎯 Demo 4: Priority Sorting & Tie-Breaking")
-    print("=" * 43)
-    print("📋 Workflow: Test data → Tie-breaking strategies → Results comparison")
+    print("🎯 Demo 4: Smart Priority Sorting & Tie-Breaking")
+    print("=" * 49)
+    print("📋 Workflow: Test data → Smart tie-breaking strategies → Results comparison")
     
     # Step 1: Create test scenario with same-priority orders
     stocks, orders = create_test_data()

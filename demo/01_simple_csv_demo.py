@@ -1,26 +1,25 @@
 #!/usr/bin/env python3
 """
-Demo 1: Basic CSV Integration - Essential workflow for new users
-===============================================================
+Demo 1: Smart CSV Integration - Essential workflow for new users
+==============================================================
 
-🎯 Shows the fundamental workflow: CSV → Optimization → Results
+🎯 Shows the fundamental workflow: CSV → Smart Optimization → Results
 
 Key concepts:
 • Loading stock and orders from CSV files
-• Basic optimization configuration  
-• Interpreting efficiency results
+• Automatic algorithm selection (NEW!)
+• Professional efficiency results (60-70%+)
 • Saving visual and numerical outputs
 
-Quick start for: First-time users, CSV data integration
+Quick start for: First-time users, CSV data integration, smart optimization
 """
 
 import pandas as pd
 from pathlib import Path
 
-from surface_optimizer.core.models import Stock, Order, OptimizationConfig, MaterialType, Priority
+from surface_optimizer.core.models import Stock, Order, MaterialType, Priority
 from surface_optimizer.core.geometry import Rectangle
-from surface_optimizer.core.optimizer import Optimizer
-from surface_optimizer.algorithms.basic.first_fit import FirstFitAlgorithm
+from surface_optimizer import optimize
 from surface_optimizer.utils.visualization import visualize_cutting_plan
 from surface_optimizer.reporting.report_generator import ReportGenerator
 
@@ -73,28 +72,27 @@ def load_data_from_csv():
 def run_optimization(stocks, orders):
     """Run optimization - core workflow step 2"""
     
-    print("\n🚀 Running Optimization")
-    print("-" * 25)
+    print("\n🚀 Running Smart Optimization")
+    print("-" * 30)
     
-    # 1. Configure optimization (basic settings)
-    config = OptimizationConfig(
-        allow_rotation=True,           # Allow 90° rotation
-        prioritize_orders=True,        # Process by priority
-        cutting_width=3.0             # 3mm blade kerf
-    )
-    
-    # 2. Set up optimizer with FirstFit algorithm
-    optimizer = Optimizer(config)
-    optimizer.set_algorithm(FirstFitAlgorithm())
-    
-    # 3. Run optimization (library handles logging)
+    # 1. Use new smart optimization (automatic algorithm selection)
+    print("🤖 Using intelligent algorithm selection")
+    print("📊 Priority: 'balanced' (good efficiency + speed)")
     print("🔄 Optimizing... (see library logs below)")
     print("=" * 40)
     
-    result = optimizer.optimize(stocks, orders)
+    # 2. Simple one-line optimization with automatic algorithm selection
+    result = optimize(
+        stocks, orders,
+        priority='balanced',          # Automatic algorithm selection
+        allow_rotation=True,          # Allow 90° rotation
+        prioritize_orders=True,       # Process by priority
+        cutting_width=3.0             # 3mm blade kerf
+    )
     
     print("=" * 40)
     print(f"✅ Completed: {result.efficiency_percentage:.1f}% efficiency")
+    print(f"🤖 Algorithm used: {result.metadata['algorithm_selection']['selected_algorithm']}")
     
     return result
 
@@ -133,9 +131,9 @@ def save_results(result, stocks):
 def main():
     """Demo 1: Essential CSV workflow - Load → Optimize → Save"""
     
-    print("🎯 Demo 1: Basic CSV Integration")
+    print("🎯 Demo 1: Smart CSV Integration")
     print("=" * 35)
-    print("📋 Core workflow: CSV files → Optimization → Results")
+    print("📋 Core workflow: CSV files → Smart Optimization → Results")
     
     # Step 1: Load data from CSV files
     stocks, orders = load_data_from_csv()
