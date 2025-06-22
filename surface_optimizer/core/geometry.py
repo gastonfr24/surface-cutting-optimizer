@@ -161,7 +161,35 @@ class Rectangle(Shape):
                        bbox1[3] < bbox2[1] or bbox2[3] < bbox1[1])
     
     def _overlaps_rectangle(self, other: 'Rectangle') -> bool:
-        """Check overlap with another rectangle using SAT"""
+        """Check overlap with another rectangle"""
+        # For axis-aligned rectangles (no rotation), use simple AABB check
+        if self.rotation == 0 and other.rotation == 0:
+            return self._overlaps_aabb(other)
+        
+        # For rotated rectangles, use SAT
+        return self._overlaps_rectangle_sat(other)
+    
+    def _overlaps_aabb(self, other: 'Rectangle') -> bool:
+        """Axis-Aligned Bounding Box overlap check for non-rotated rectangles"""
+        # Rectangle 1: (x1, y1) to (x1 + w1, y1 + h1)
+        x1, y1 = self.x, self.y
+        w1, h1 = self.width, self.height
+        
+        # Rectangle 2: (x2, y2) to (x2 + w2, y2 + h2)
+        x2, y2 = other.x, other.y
+        w2, h2 = other.width, other.height
+        
+        # Check for non-overlap (touching edges are NOT overlaps)
+        if (x1 + w1 <= x2 or  # rect1 is left of rect2
+            x2 + w2 <= x1 or  # rect2 is left of rect1
+            y1 + h1 <= y2 or  # rect1 is below rect2
+            y2 + h2 <= y1):   # rect2 is below rect1
+            return False
+        
+        return True  # They overlap
+    
+    def _overlaps_rectangle_sat(self, other: 'Rectangle') -> bool:
+        """Check overlap with another rectangle using SAT (for rotated rectangles)"""
         # Get corners of both rectangles
         corners1 = self._get_corners()
         corners2 = other._get_corners()

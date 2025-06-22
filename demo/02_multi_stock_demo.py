@@ -76,14 +76,14 @@ def run_optimization(stocks, orders):
     
     # 1. Use balanced optimization for reliable multi-panel scenarios
     print("🤖 Using intelligent algorithm selection")
-    print("📊 Priority: 'balanced' (reliable efficiency for multi-panel)")
+    print("📊 Priority: 'speed' (using BestFit - no overlap issues)")
     print("🔄 Optimizing across multiple panels...")
     print("=" * 40)
     
-    # 2. Smart optimization with balanced approach for multi-panel case
+    # 2. Smart optimization with speed focus to use BestFit (confirmed working)
     result = optimize(
         stocks, orders,
-        priority='balanced',          # Reliable algorithms for multi-panel
+        priority='speed',             # Use BestFit which has no overlap issues
         allow_rotation=True,          # Allow 90° rotation
         prioritize_orders=True,       # Process by priority
         cutting_width=3.0,            # 3mm blade kerf
