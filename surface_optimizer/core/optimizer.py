@@ -5,6 +5,7 @@ Enhanced with logging and advanced features
 
 import time
 from typing import List, Optional, Dict, Any
+from pathlib import Path
 from .models import Stock, Order, CuttingResult, OptimizationConfig
 from .validators import validate_stocks, validate_orders, validate_stock_order_compatibility
 from .exceptions import OptimizationError, ValidationError
@@ -20,6 +21,9 @@ class Optimizer:
         self.algorithm: Optional[BaseAlgorithm] = None
         self.logger = logger or get_logger()
         self.optimization_history: List[CuttingResult] = []
+        self._last_result: Optional[CuttingResult] = None
+        self._last_stocks: Optional[List[Stock]] = None
+        self._last_orders: Optional[List[Order]] = None
     
     def set_algorithm(self, algorithm: BaseAlgorithm):
         """Set the optimization algorithm to use"""
@@ -132,8 +136,11 @@ class Optimizer:
             self.logger.log_algorithm_result(result_summary)
             self.logger.end_operation("optimize", success=True, result=result_summary)
             
-            # Store in history
+            # Store in history and cache for convenience methods
             self.optimization_history.append(result)
+            self._last_result = result
+            self._last_stocks = stocks
+            self._last_orders = orders
             
             return result
             
@@ -141,6 +148,238 @@ class Optimizer:
             self.logger.end_operation("optimize", success=False, 
                                     result={"error": str(e)})
             raise OptimizationError(f"Optimization failed: {e}")
+    
+    def visualize(self, save_path: Optional[str] = None, output_dir: str = "visualizations") -> bool:
+        """
+        Visualize the last optimization result
+        
+        Args:
+            save_path: Filename to save (None to show interactively)
+            output_dir: Directory to save visualization
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if not self._last_result or not self._last_stocks:
+            print("❌ No optimization result to visualize. Run optimize() first.")
+            return False
+        
+        try:
+            from ..utils.visualization import visualize_cutting_plan
+            visualize_cutting_plan(self._last_result, self._last_stocks, save_path, output_dir)
+            if save_path:
+                print(f"✅ Visualization saved: {output_dir}/{save_path}")
+            return True
+        except Exception as e:
+            print(f"❌ Visualization failed: {e}")
+            return False
+    
+    def generate_report(self, format: str = "json", save_path: Optional[str] = None, 
+                       output_dir: str = "reports", config: Optional[Any] = None) -> Dict[str, Any]:
+        """
+        🚀 ADVANCED REPORT GENERATOR with full customization support
+        
+        ✅ Multiple formats: JSON, HTML, PDF, Excel, CSV, XML, Markdown, TXT
+        ✅ Full customization: language, company info, project details
+        ✅ Advanced filters: material, priority, size, efficiency ranges
+        ✅ Usage-specific configs: CNC, accounting, presentation, audit
+        ✅ Industrial standards: metric/imperial units, precision control
+        ✅ Compliance: ISO standards, traceability, digital signatures
+        
+        Args:
+            format: Basic format ('json', 'coordinates', 'performance', 'material') or 
+                   Advanced format via config.format (HTML, PDF, Excel, etc.)
+            save_path: Filename to save (None for no file output)
+            output_dir: Directory to save report
+            config: Advanced ReportConfig for full customization. Examples:
+            
+                # Professional presentation report in Spanish
+                config = ReportConfig(
+                    format=ReportFormat.HTML,
+                    language=ReportLanguage.SPANISH,
+                    usage=ReportUsage.PRESENTATION,
+                    company_info=CompanyInfo(name="Mi Empresa", address="Madrid"),
+                    project_info=ProjectInfo(name="Proyecto 2024", client="Cliente VIP"),
+                    filters=FilterCriteria(materials=[MaterialType.WOOD], min_efficiency=60.0),
+                    unit_system=UnitSystem.METRIC,
+                    compliance_standards=[ComplianceStandard.ISO_9001],
+                    include_recommendations=True,
+                    confidentiality_level="confidential"
+                )
+                
+                # CNC machine instructions in English
+                config = ReportConfig(
+                    format=ReportFormat.XML,
+                    language=ReportLanguage.ENGLISH,
+                    usage=ReportUsage.CNC_MACHINE,
+                    unit_system=UnitSystem.IMPERIAL,
+                    include_cutting_instructions=True,
+                    decimal_precision=3
+                )
+                
+                # Compliance audit report
+                config = ReportConfig(
+                    format=ReportFormat.PDF,
+                    usage=ReportUsage.AUDIT,
+                    compliance_standards=[ComplianceStandard.ISO_9001, ComplianceStandard.ISO_14001],
+                    include_signatures=True,
+                    digital_signature=True,
+                    confidentiality_level="restricted"
+                )
+            
+        Returns:
+            Report data as dictionary or file path for advanced reports
+        """
+        if not self._last_result or not self._last_stocks or not self._last_orders:
+            print("❌ No optimization result to report. Run optimize() first.")
+            return {}
+        
+        try:
+            from ..reporting.report_generator import ReportGenerator, ReportConfig, ReportFormat
+            report_gen = ReportGenerator()
+            
+            # 🚀 ADVANCED REPORT HANDLING
+            if config is not None:
+                # Use advanced report generation with full customization
+                if not save_path:
+                    print("⚠️ Advanced reports require save_path. Defaulting to 'advanced_report'")
+                    save_path = "advanced_report"
+                
+                # Determine extension based on format
+                format_extensions = {
+                    ReportFormat.JSON: ".json",
+                    ReportFormat.HTML: ".html", 
+                    ReportFormat.PDF: ".pdf",
+                    ReportFormat.EXCEL: ".xlsx",
+                    ReportFormat.CSV: ".csv",
+                    ReportFormat.XML: ".xml",
+                    ReportFormat.MARKDOWN: ".md",
+                    ReportFormat.TXT: ".txt"
+                }
+                
+                ext = format_extensions.get(config.format, ".json")
+                if not save_path.endswith(ext):
+                    save_path = save_path + ext
+                
+                output_path = Path(output_dir) / save_path
+                output_path.parent.mkdir(exist_ok=True, parents=True)
+                
+                generated_path = report_gen.generate_advanced_report(
+                    self._last_result, self._last_stocks, self._last_orders, config, str(output_path)
+                )
+                
+                print(f"✅ Advanced {config.format.value.upper()} report saved: {generated_path}")
+                print(f"   📋 Language: {config.language.value}")
+                print(f"   🎯 Usage: {config.usage.value}")
+                print(f"   📏 Units: {config.unit_system.value}")
+                if config.filters:
+                    print(f"   🔍 Filters applied: Yes")
+                if config.compliance_standards:
+                    print(f"   ✅ Compliance: {', '.join(std.value for std in config.compliance_standards)}")
+                
+                return {"generated_file": generated_path, "format": config.format.value}
+            
+            # 📊 LEGACY REPORT HANDLING (for backward compatibility)
+            else:
+                if format == "coordinates":
+                    report = report_gen.generate_cutting_coordinates_report(self._last_result, self._last_stocks)
+                    data = {
+                        "summary": report.summary,
+                        "cutting_plan": report.cutting_plan,
+                        "generated_date": report.generation_date.isoformat()
+                    }
+                elif format == "performance":
+                    report = report_gen.generate_performance_report(self._last_result)
+                    data = {
+                        "efficiency_metrics": report.efficiency_metrics,
+                        "cost_analysis": report.cost_analysis,
+                        "fulfillment_analysis": report.fulfillment_analysis,
+                        "waste_analysis": report.waste_analysis,
+                        "optimization_time": report.optimization_time
+                    }
+                elif format == "material":
+                    report = report_gen.generate_material_report(self._last_result, self._last_stocks)
+                    data = {
+                        "material_breakdown": report.material_breakdown,
+                        "waste_by_material": report.waste_by_material,
+                        "cost_by_material": report.cost_by_material,
+                        "efficiency_by_material": report.efficiency_by_material
+                    }
+                else:  # json (full report)
+                    cutting_report = report_gen.generate_cutting_report(
+                        self._last_result, self._last_stocks, self._last_orders, "Optimization Report"
+                    )
+                    performance_report = report_gen.generate_performance_report(self._last_result)
+                    
+                    data = {
+                        "title": cutting_report.title,
+                        "generation_date": cutting_report.generation_date.isoformat(),
+                        "summary": cutting_report.metadata,
+                        "performance": {
+                            "efficiency_metrics": performance_report.efficiency_metrics,
+                            "cost_analysis": performance_report.cost_analysis,
+                            "fulfillment_analysis": performance_report.fulfillment_analysis,
+                            "waste_analysis": performance_report.waste_analysis,
+                            "optimization_time": performance_report.optimization_time
+                        },
+                        "algorithm": self._last_result.algorithm_used,
+                        "metadata": self._last_result.metadata
+                    }
+                
+                # Save if requested
+                if save_path:
+                    import json
+                    output_path = Path(output_dir)
+                    output_path.mkdir(exist_ok=True)
+                    
+                    full_path = output_path / save_path
+                    with open(full_path, 'w') as f:
+                        json.dump(data, f, indent=2)
+                    print(f"✅ Report saved: {full_path}")
+                
+                return data
+            
+        except Exception as e:
+            print(f"❌ Report generation failed: {e}")
+            import traceback
+            traceback.print_exc()
+            return {}
+    
+    def save_results(self, output_dir: str = "results", prefix: str = "optimization") -> bool:
+        """
+        Save both visualization and report (convenience method)
+        
+        Args:
+            output_dir: Directory to save files
+            prefix: Filename prefix
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if not self._last_result:
+            print("❌ No optimization result to save. Run optimize() first.")
+            return False
+        
+        try:
+            # Save visualization
+            viz_success = self.visualize(f"{prefix}_layout.png", output_dir)
+            
+            # Save full report
+            report_success = self.generate_report("json", f"{prefix}_report.json", output_dir) != {}
+            
+            # Save cutting coordinates
+            coord_success = self.generate_report("coordinates", f"{prefix}_coordinates.json", output_dir) != {}
+            
+            if viz_success and report_success and coord_success:
+                print(f"✅ All files saved to: {output_dir}/")
+                return True
+            else:
+                print("⚠️ Some files failed to save")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Save failed: {e}")
+            return False
     
     def compare_algorithms(self, algorithms: List[BaseAlgorithm], 
                           stocks: List[Stock], orders: List[Order]) -> List[CuttingResult]:
@@ -175,6 +414,30 @@ class Optimizer:
             self.algorithm = original_algorithm
         
         return results
+    
+    def plot_comparison(self, results: List[CuttingResult], algorithm_names: List[str], 
+                       save_path: Optional[str] = None, output_dir: str = "visualizations") -> bool:
+        """
+        Plot algorithm comparison results
+        
+        Args:
+            results: List of CuttingResult from compare_algorithms
+            algorithm_names: Names of algorithms
+            save_path: Filename to save (None to show)
+            output_dir: Directory to save
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            from ..utils.visualization import plot_algorithm_comparison
+            plot_algorithm_comparison(results, algorithm_names, save_path, output_dir)
+            if save_path:
+                print(f"✅ Comparison chart saved: {output_dir}/{save_path}")
+            return True
+        except Exception as e:
+            print(f"❌ Comparison plot failed: {e}")
+            return False
     
     def _validate_result(self, result: CuttingResult, 
                         stocks: List[Stock], orders: List[Order]):

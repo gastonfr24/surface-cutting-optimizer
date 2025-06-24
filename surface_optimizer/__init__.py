@@ -15,7 +15,7 @@ Cost: 100% free and open source
 Version: 1.0.0 - Production Ready
 """
 
-from .core.models import Stock, Order, OptimizationConfig, MaterialType, Priority
+from .core.models import Stock, Order, OptimizationConfig, MaterialType, Priority, OrderSortCriteria
 from .core.geometry import Rectangle, Circle
 from .core.optimizer import Optimizer
 
@@ -26,6 +26,27 @@ from .algorithms.basic.bottom_left import BottomLeftAlgorithm
 from .algorithms.advanced.genetic import GeneticAlgorithm
 from .algorithms.advanced.simulated_annealing import SimulatedAnnealingAlgorithm
 from .algorithms.advanced.hybrid_optimizer import HybridOptimizer
+
+# Import advanced reporting classes
+try:
+    from .reporting.report_generator import (
+        ReportGenerator, ReportConfig, ReportFormat, ReportLanguage, 
+        ReportUsage, UnitSystem, ComplianceStandard, FilterCriteria,
+        CompanyInfo, ProjectInfo
+    )
+except ImportError as e:
+    # Create placeholder classes for backward compatibility
+    print(f"⚠️ Warning: Advanced reporting features unavailable: {e}")
+    class ReportGenerator: pass
+    class ReportConfig: pass
+    class ReportFormat: pass
+    class ReportLanguage: pass
+    class ReportUsage: pass
+    class UnitSystem: pass
+    class ComplianceStandard: pass
+    class FilterCriteria: pass
+    class CompanyInfo: pass
+    class ProjectInfo: pass
 
 __version__ = "1.0.0"
 __author__ = "Surface Cutting Optimizer Team"
@@ -42,9 +63,18 @@ print("🎯 Performance: 85.2% efficiency (Grade A)")
 print("🔧 Usage: python demo/industrial_demo.py")
 
 __all__ = [
-    "Stock", "Order", "OptimizationConfig", "MaterialType", "Priority", 
-    "Rectangle", "Circle", "Optimizer",
-    "optimize", "compare_algorithms", "get_algorithm_recommendations"
+    # Core classes
+    "Stock", "Order", "OptimizationConfig", "MaterialType", "Priority", "OrderSortCriteria",
+    "Rectangle", "Circle", "Optimizer", "OptimizationResult",
+    
+    # Main functions
+    "optimize", "compare_algorithms", "get_algorithm_recommendations",
+    "visualize", "generate_report",
+    
+    # Advanced Reporting
+    "ReportGenerator", "ReportConfig", "ReportFormat", "ReportLanguage", 
+    "ReportUsage", "UnitSystem", "ComplianceStandard", "FilterCriteria",
+    "CompanyInfo", "ProjectInfo"
 ]
 
 def auto_select_algorithm(stocks, orders, priority='balanced'):
@@ -165,7 +195,71 @@ def auto_select_algorithm(stocks, orders, priority='balanced'):
             )
 
 
-def optimize(stocks, orders, priority='balanced', algorithm=None, config=None, **config_params):
+class OptimizationResult:
+    """Enhanced result wrapper with convenience methods"""
+    
+    def __init__(self, result: 'CuttingResult', optimizer: 'Optimizer'):
+        self.result = result
+        self._optimizer = optimizer
+        
+        # Expose all CuttingResult attributes
+        for attr in dir(result):
+            if not attr.startswith('_'):
+                setattr(self, attr, getattr(result, attr))
+    
+    def visualize(self, save_path: str = None, output_dir: str = "visualizations", **kwargs):
+        """
+        🎨 Show or save cutting plan visualization with advanced options
+        
+        Args:
+            save_path: Filename to save (None to show interactively)
+            output_dir: Directory to save visualization
+            **kwargs: Advanced visualization parameters (see visualize() function for details)
+        """
+        return visualize(self.result, self._optimizer._last_stocks, save_path, output_dir, **kwargs)
+    
+    def management_report(self, save_path: str = None, output_dir: str = "visualizations", **kwargs):
+        """
+        📊 Generate professional management report with detailed information
+        
+        Args:
+            save_path: Filename to save (None to show interactively)
+            output_dir: Directory to save visualization
+            **kwargs: Advanced visualization parameters
+        """
+        # Get orders from optimizer if available
+        orders = getattr(self._optimizer, '_last_orders', None)
+        return visualize_management_report(self.result, self._optimizer._last_stocks, orders, save_path, output_dir, **kwargs)
+    
+    def generate_report(self, format: str = "json", save_path: str = None, output_dir: str = "reports", config=None):
+        """Generate optimization report with advanced configuration support"""
+        return self._optimizer.generate_report(format, save_path, output_dir, config)
+    
+    def save_results(self, output_dir: str = "results", prefix: str = "optimization"):
+        """Save both visualization and reports"""
+        return self._optimizer.save_results(output_dir, prefix)
+    
+    def show(self):
+        """Quick display of results"""
+        print(f"\n🎯 Optimization Results")
+        print("=" * 25)
+        print(f"Algorithm: {self.algorithm_used}")
+        print(f"Efficiency: {self.efficiency_percentage:.1f}%")
+        print(f"Stocks used: {self.total_stock_used}")
+        print(f"Orders fulfilled: {self.total_orders_fulfilled}")
+        print(f"Total cost: ${self.total_cost:.2f}")
+        print(f"Computation time: {self.computation_time:.3f}s")
+        
+        if hasattr(self, 'metadata') and self.metadata:
+            selection_info = self.metadata.get('algorithm_selection', {})
+            if selection_info:
+                method = selection_info.get('selection_method', 'unknown')
+                priority = selection_info.get('priority', 'none')
+                print(f"Selection: {method} ({priority} priority)")
+
+
+def optimize(stocks, orders, priority='balanced', algorithm=None, config=None, 
+             save_visualization=None, save_report=None, output_dir="results", **config_params):
     """
     🚀 Simple optimization function - automatically chooses best algorithm
     
@@ -177,23 +271,28 @@ def optimize(stocks, orders, priority='balanced', algorithm=None, config=None, *
         priority: 'speed' | 'balanced' | 'quality' | 'maximum' (default: 'balanced')
         algorithm: Manual algorithm override (None for automatic selection)
         config: OptimizationConfig object (None for defaults)
+        save_visualization: Filename to save visualization (None for no save)
+        save_report: Filename to save report (None for no save)
+        output_dir: Directory for saved files (default: "results")
         **config_params: Additional configuration parameters
         
     Returns:
-        CuttingResult with optimization results and metadata
+        OptimizationResult with optimization results and convenience methods
         
     Examples:
-        # Automatic (chooses best algorithm)
+        # Basic usage
         result = optimize(stocks, orders)
+        result.show()  # Display results
+        result.visualize()  # Show cutting plan
+        
+        # Auto-save results
+        result = optimize(stocks, orders, save_visualization="plan.png", save_report="report.json")
         
         # Priority-based selection
         result = optimize(stocks, orders, priority='quality')
         
-        # Manual algorithm
-        result = optimize(stocks, orders, algorithm='genetic')
-        
-        # With custom config
-        result = optimize(stocks, orders, priority='quality', allow_rotation=True, cutting_width=3.0)
+        # Manual algorithm with custom config
+        result = optimize(stocks, orders, algorithm='genetic', allow_rotation=True, cutting_width=3.0)
     """
     # Create or update configuration
     if config is None:
@@ -242,7 +341,17 @@ def optimize(stocks, orders, priority='balanced', algorithm=None, config=None, *
         'priority': priority
     }
     
-    return result
+    # Create enhanced result
+    enhanced_result = OptimizationResult(result, optimizer)
+    
+    # Auto-save if requested
+    if save_visualization:
+        enhanced_result.visualize(save_visualization, output_dir)
+    
+    if save_report:
+        enhanced_result.generate_report("json", save_report, output_dir)
+    
+    return enhanced_result
 
 
 def compare_algorithms(stocks, orders, algorithms=None, config=None):
@@ -342,3 +451,186 @@ def get_algorithm_recommendations():
             'best_for': 'Critical efficiency requirements'
         }
     } 
+
+
+def visualize(result, stocks, save_path=None, output_dir="visualizations", **kwargs):
+    """
+    🎨 Advanced function to visualize cutting plan
+    
+    Args:
+        result: CuttingResult from optimization
+        stocks: List of Stock objects used
+        save_path: Filename to save (None to show interactively)
+        output_dir: Directory to save visualization
+        **kwargs: Advanced visualization parameters
+        
+    Advanced parameters:
+        figsize: Figure size as (width, height) in inches
+        dpi: Image resolution (300=high, 150=web, 72=draft)
+        format: Image format ('png', 'jpg', 'pdf', 'svg')
+        theme: Color theme ('default', 'professional', 'colorful', 'minimal')
+        show_grid: Whether to show grid lines (default: True)
+        grid_alpha: Grid transparency 0.0-1.0 (default: 0.3)
+        show_efficiency: Include efficiency in title (default: True)
+        show_dimensions: Show stock dimensions (default: True)
+        show_labels: Show piece labels (default: True)
+        show_cost: Include cost information (default: False)
+        layout_style: Layout ('auto', 'grid', 'single_row')
+        max_cols: Maximum columns in grid layout (default: 3)
+        
+    Examples:
+        # Basic usage
+        visualize(result, stocks)
+        
+        # Save with custom settings
+        visualize(result, stocks, "plan.png", 
+                 theme='professional', dpi=150, show_cost=True)
+        
+        # High quality PDF for presentations
+        visualize(result, stocks, "presentation.pdf", 
+                 figsize=(16, 12), dpi=300, theme='professional')
+        
+        # Minimal style for documentation
+        visualize(result, stocks, "docs.png", 
+                 theme='minimal', show_efficiency=False, show_grid=False)
+    """
+    try:
+        from .utils.visualization import visualize_cutting_plan
+        visualize_cutting_plan(result, stocks, save_path, output_dir, **kwargs)
+        if save_path:
+            print(f"✅ Visualization saved: {output_dir}/{save_path}")
+        return True
+    except Exception as e:
+        print(f"❌ Visualization failed: {e}")
+        return False
+
+
+def generate_report(result, stocks, orders=None, format="json", save_path=None, output_dir="reports"):
+    """
+    📊 Convenience function to generate optimization report
+    
+    Args:
+        result: CuttingResult from optimization
+        stocks: List of Stock objects used
+        orders: List of Order objects (optional)
+        format: Report format ('json', 'coordinates', 'performance', 'material')
+        save_path: Filename to save (None for no file output)
+        output_dir: Directory to save report
+        
+    Returns:
+        Report data as dictionary
+        
+    Examples:
+        # Generate full report
+        data = generate_report(result, stocks, orders)
+        
+        # Save cutting coordinates
+        generate_report(result, stocks, format="coordinates", save_path="cuts.json")
+    """
+    try:
+        from pathlib import Path
+        import json
+        
+        report_gen = ReportGenerator()
+        
+        if format == "coordinates":
+            report = report_gen.generate_cutting_coordinates_report(result, stocks)
+            data = {
+                "summary": report.summary,
+                "cutting_plan": report.cutting_plan,
+                "generated_date": report.generation_date.isoformat()
+            }
+        elif format == "performance":
+            report = report_gen.generate_performance_report(result)
+            data = {
+                "efficiency_metrics": report.efficiency_metrics,
+                "cost_analysis": report.cost_analysis,
+                "fulfillment_analysis": report.fulfillment_analysis,
+                "waste_analysis": report.waste_analysis,
+                "optimization_time": report.optimization_time
+            }
+        elif format == "material":
+            report = report_gen.generate_material_report(result, stocks)
+            data = {
+                "material_breakdown": report.material_breakdown,
+                "waste_by_material": report.waste_by_material,
+                "cost_by_material": report.cost_by_material,
+                "efficiency_by_material": report.efficiency_by_material
+            }
+        else:  # json (full report)
+            cutting_report = report_gen.generate_cutting_report(
+                result, stocks, orders or [], "Optimization Report"
+            )
+            performance_report = report_gen.generate_performance_report(result)
+            
+            data = {
+                "title": cutting_report.title,
+                "generation_date": cutting_report.generation_date.isoformat(),
+                "summary": cutting_report.metadata,
+                "performance": {
+                    "efficiency_metrics": performance_report.efficiency_metrics,
+                    "cost_analysis": performance_report.cost_analysis,
+                    "fulfillment_analysis": performance_report.fulfillment_analysis,
+                    "waste_analysis": performance_report.waste_analysis,
+                    "optimization_time": performance_report.optimization_time
+                },
+                "algorithm": result.algorithm_used,
+                "metadata": result.metadata if hasattr(result, 'metadata') else {}
+            }
+        
+        # Save if requested
+        if save_path:
+            output_path = Path(output_dir)
+            output_path.mkdir(exist_ok=True)
+            
+            full_path = output_path / save_path
+            with open(full_path, 'w') as f:
+                json.dump(data, f, indent=2)
+            print(f"✅ Report saved: {full_path}")
+        
+        return data
+        
+    except Exception as e:
+        print(f"❌ Report generation failed: {e}")
+        return {} 
+
+
+def visualize_management_report(result, stocks, orders=None, save_path=None, output_dir="visualizations", **kwargs):
+    """
+    📊 Create professional management report with detailed stock and order information
+    
+    Features:
+    - Fixed title spacing to prevent overlap
+    - Detailed information panel with stocks and orders
+    - Professional layout optimized for presentations
+    - Summary statistics and efficiency metrics
+    
+    Args:
+        result: CuttingResult from optimization
+        stocks: List of Stock objects used
+        orders: List of Order objects (optional, for detailed info)
+        save_path: Filename to save (None to show interactively)
+        output_dir: Directory to save visualization
+        **kwargs: Additional visualization parameters
+        
+    Examples:
+        # Basic management report
+        visualize_management_report(result, stocks, orders)
+        
+        # Save high-quality PDF for presentation
+        visualize_management_report(result, stocks, orders, "executive_report.pdf", 
+                                  figsize=(16, 12), dpi=300)
+        
+        # Include detailed order information
+        visualize_management_report(result, stocks, orders, "detailed_report.pdf",
+                                  show_detailed_info=True)
+    """
+    try:
+        from .utils.visualization import visualize_management_report as vmr
+        vmr(result, stocks, orders, save_path, output_dir, **kwargs)
+        if save_path:
+            print(f"✅ Management report saved: {output_dir}/{save_path}")
+        return True
+    except Exception as e:
+        print(f"❌ Management report failed: {e}")
+        return False 

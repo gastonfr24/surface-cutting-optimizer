@@ -1,0 +1,13 @@
+<?xml version="1.0" ?>
+<cutting_optimization_report version="1.0" language="en" generated="2025-06-24T00:41:40.303638">
+  <metadata/>
+  <summary>
+    <efficiency>23.02771855010661</efficiency>
+    <total_cost>231.25</total_cost>
+    <stocks_used>0</stocks_used>
+    <orders_fulfilled>0</orders_fulfilled>
+    <algorithm>best_fit</algorithm>
+    <computation_time>0.0</computation_time>
+  </summary>
+  <cutting_instructions/>
+</cutting_optimization_report>

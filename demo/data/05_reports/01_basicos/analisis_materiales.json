@@ -1,0 +1,49 @@
+{
+  "material_breakdown": {
+    "plastic": {
+      "used_area": 1440000,
+      "total_area": 4500000,
+      "cost": 65.75,
+      "pieces": 3,
+      "stocks_used": [
+        "PLASTIC_C3"
+      ],
+      "stocks_count": 1
+    },
+    "metal": {
+      "used_area": 240000,
+      "total_area": 2000000,
+      "cost": 120.0,
+      "pieces": 1,
+      "stocks_used": [
+        "METAL_B2"
+      ],
+      "stocks_count": 1
+    },
+    "wood": {
+      "used_area": 480000,
+      "total_area": 2880000,
+      "cost": 45.5,
+      "pieces": 6,
+      "stocks_used": [
+        "WOOD_A1"
+      ],
+      "stocks_count": 1
+    }
+  },
+  "waste_by_material": {
+    "plastic": 68.0,
+    "metal": 88.0,
+    "wood": 83.33333333333334
+  },
+  "cost_by_material": {
+    "plastic": 65.75,
+    "metal": 120.0,
+    "wood": 45.5
+  },
+  "efficiency_by_material": {
+    "plastic": 32.0,
+    "metal": 12.0,
+    "wood": 16.666666666666664
+  }
+}

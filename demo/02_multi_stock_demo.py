@@ -10,6 +10,7 @@ Key concepts:
 • Smart algorithm selection for complex cases
 • Advanced cross-panel optimization strategy
 • Professional-grade efficiency results (70%+)
+• Simplified API - no multiple imports needed!
 
 Best for: Real production scenarios with varied stock inventory
 """
@@ -17,11 +18,8 @@ Best for: Real production scenarios with varied stock inventory
 import pandas as pd
 from pathlib import Path
 
-from surface_optimizer.core.models import Stock, Order, MaterialType, Priority
-from surface_optimizer.core.geometry import Rectangle
-from surface_optimizer import optimize
-from surface_optimizer.utils.visualization import visualize_cutting_plan
-from surface_optimizer.reporting.report_generator import ReportGenerator
+# NEW SIMPLIFIED IMPORTS - Only one line needed! 🎉
+from surface_optimizer import Stock, Order, MaterialType, Priority, Rectangle, optimize
 
 
 def load_data_from_csv():
@@ -80,76 +78,95 @@ def run_optimization(stocks, orders):
     print("🔄 Optimizing across multiple panels...")
     print("=" * 40)
     
-    # 2. Smart optimization with speed focus to use BestFit (confirmed working)
+    # 2. NEW SIMPLIFIED API - Auto-save files! 🎉
     result = optimize(
         stocks, orders,
-        priority='speed',             # Use BestFit which has no overlap issues
-        allow_rotation=True,          # Allow 90° rotation
-        prioritize_orders=True,       # Process by priority
-        cutting_width=3.0,            # 3mm blade kerf
-        max_computation_time=30       # Sufficient time for optimization
+        priority='speed',                           # Use BestFit which has no overlap issues
+        allow_rotation=True,                        # Allow 90° rotation
+        prioritize_orders=True,                     # Process by priority
+        cutting_width=3.0,                          # 3mm blade kerf
+        max_computation_time=30,                    # Sufficient time for optimization
+        save_visualization="multi_layout.png",     # NEW: Auto-save visualization
+        save_report="multi_report.json",           # NEW: Auto-save report
+        output_dir="demo/data/02_multi/results"    # NEW: Specify output directory
     )
     
     print("=" * 40)
-    print(f"✅ Completed: {result.efficiency_percentage:.1f}% efficiency")
-    print(f"🤖 Algorithm used: {result.metadata['algorithm_selection']['selected_algorithm']}")
-    print(f"📦 Used {result.total_stock_used}/{len(stocks)} panels")
+    result.show()  # NEW: Easy result display
     
     return result
 
 
-def save_results(result, stocks):
-    """Save multi-panel results"""
+def show_advanced_features(result, stocks, orders):
+    """Show the new advanced convenience features"""
     
-    print("\n💾 Saving Multi-Panel Results")
-    print("-" * 30)
+    print("\n🎨 Advanced Features Demo")
+    print("-" * 26)
     
-    # 1. Create output directory
+    # Create results directory
     results_dir = Path(__file__).parent.parent / "demo" / "data" / "02_multi" / "results"
     results_dir.mkdir(parents=True, exist_ok=True)
     
-    # 2. Generate multi-panel layout visualization
-    visualize_cutting_plan(result, stocks, save_path="multi_layout.png", output_dir=str(results_dir))
-    print("✅ multi_layout.png - Multi-panel cutting plan")
+    # 1. Show cutting plan interactively (if running in Jupyter/interactive)
+    print("🖼️  Showing cutting plan...")
+    result.visualize()  # Shows in window if possible
     
-    # 3. Generate comprehensive report
-    report_gen = ReportGenerator()
-    cutting_report = report_gen.generate_cutting_coordinates_report(result, stocks)
+    # 2. Generate different types of reports
+    print("📊 Generating cutting coordinates...")
+    coord_data = result.generate_report("coordinates", "cutting_coordinates.json", str(results_dir))
     
-    import json
-    report_path = results_dir / "multi_report.json"
-    with open(report_path, 'w') as f:
-        json.dump({
-            "summary": cutting_report.summary,
-            "cutting_plan": cutting_report.cutting_plan,
-            "generated_date": cutting_report.generation_date.isoformat()
-        }, f, indent=2)
+    print("📈 Generating performance analysis...")
+    perf_data = result.generate_report("performance", "performance_analysis.json", str(results_dir))
     
-    print("✅ multi_report.json - Panel-by-panel coordinates")
-    print(f"📁 Files saved to: {results_dir}")
+    print("🔍 Generating material breakdown...")
+    material_data = result.generate_report("material", "material_breakdown.json", str(results_dir))
+    
+    # 3. Save everything at once (convenience method)
+    print("💾 Saving complete results package...")
+    result.save_results(str(results_dir), "complete_analysis")
+    
+    print(f"✅ All files saved to: {results_dir}")
+    
+    # 4. Display key metrics
+    print(f"\n📊 Key Metrics:")
+    print(f"   • Efficiency: {result.efficiency_percentage:.1f}%")
+    print(f"   • Panels used: {result.total_stock_used}/{len(stocks)}")
+    print(f"   • Total cost: ${result.total_cost:.2f}")
+    print(f"   • Computation: {result.computation_time:.3f}s")
+    
+    return coord_data, perf_data, material_data
 
 
 def main():
-    """Demo 2: Multi-panel optimization workflow"""
+    """Demo 2: Multi-panel optimization workflow with NEW simplified API"""
     
     print("🎯 Demo 2: Smart Multi-Panel Optimization")
     print("=" * 42)
     print("📋 Workflow: Multiple panels → Smart selection → Optimal usage")
+    print("🆕 NEW: Simplified API - no complex imports!")
     
     # Step 1: Load multiple stock panels
     stocks, orders = load_data_from_csv()
     if not stocks or not orders:
         return
     
-    # Step 2: Run cross-panel optimization
+    # Step 2: Run cross-panel optimization (NEW SIMPLIFIED WAY)
     result = run_optimization(stocks, orders)
     if not result:
         return
     
-    # Step 3: Save multi-panel results
-    save_results(result, stocks)
+    # Step 3: Show advanced features (NEW)
+    coord_data, perf_data, material_data = show_advanced_features(result, stocks, orders)
     
     print("\n✅ Multi-panel demo completed!")
+    print("\n🎉 NEW FEATURES USED:")
+    print("   • ✅ Single import line (surface_optimizer)")
+    print("   • ✅ Auto-save visualization and reports")
+    print("   • ✅ Built-in result.show() method")
+    print("   • ✅ Convenient result.visualize() method")
+    print("   • ✅ Multiple report formats")
+    print("   • ✅ Complete result.save_results() package")
+    
     print("\n🚀 Next demos:")
     print("   • 03_overflow_demo.py - Order discarding")
     print("   • 04_priority_sorting_demo.py - Priority handling")

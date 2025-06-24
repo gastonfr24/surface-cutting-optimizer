@@ -1,208 +1,297 @@
-# Guía de Inicio Rápido
+# Quick Start Guide - Simplified API 🚀
 
-🚀 **Empezar con Surface Cutting Optimizer en 5 minutos**
+## Before vs After: API Simplification
 
-## 🎯 Demos Rápidos (Recomendado)
-
-**¿Prefieres ver ejemplos funcionando?** Ejecuta los demos interactivos:
-
-```bash
-env/Scripts/activate  # Activar entorno virtual
-
-python demo/01_simple_csv_demo.py     # Flujo básico CSV 
-python demo/02_multi_stock_demo.py    # Múltiples paneles
-python demo/03_overflow_demo.py       # Manejo de capacidad 
-python demo/04_priority_sorting_demo.py  # Prioridades avanzadas
-```
-
-📖 **Documentación completa de demos:** [demos.md](demos.md)
-
-## 📦 Instalación
-
-```bash
-pip install surface-cutting-optimizer
-```
-
-## 💡 Concepto Básico
-
-**Surface Cutting Optimizer** resuelve el problema de: *"Tengo materiales de ciertos tamaños y necesito cortar piezas específicas. ¿Cómo optimizo el corte para minimizar desperdicio?"*
-
-## 🎯 Ejemplo Básico
-
-### 1. Importar la librería
+### ❌ Old Way (Complex)
 ```python
-from surface_optimizer import Optimizer, Stock, Order
+# Multiple imports needed
+from surface_optimizer.core.models import Stock, Order, MaterialType, Priority
 from surface_optimizer.core.geometry import Rectangle
-from surface_optimizer.core.models import MaterialType, Priority
-from surface_optimizer.algorithms.basic.bottom_left import BottomLeftAlgorithm
-```
+from surface_optimizer.core.optimizer import Optimizer
+from surface_optimizer.algorithms.basic.best_fit import BestFitAlgorithm
+from surface_optimizer.utils.visualization import visualize_cutting_plan
+from surface_optimizer.reporting.report_generator import ReportGenerator
 
-### 2. Definir materiales disponibles (Stock)
-```python
-# Tengo estas láminas de vidrio disponibles
-stocks = [
-    Stock("Vidrio-1", 2000, 1000, 6.0, MaterialType.GLASS, 100.0),
-    Stock("Vidrio-2", 2000, 1000, 6.0, MaterialType.GLASS, 100.0),
-    Stock("Metal-1", 1500, 1200, 3.0, MaterialType.METAL, 150.0)
-]
-```
-
-### 3. Definir pedidos que necesito cortar
-```python
-# Necesito cortar estas piezas
-orders = [
-    Order("Ventana-1", Rectangle(800, 600), quantity=2, priority=Priority.HIGH, 
-          material_type=MaterialType.GLASS, notes="Ventana principal"),
-    
-    Order("Puerta-1", Rectangle(600, 400), quantity=1, priority=Priority.MEDIUM,
-          material_type=MaterialType.GLASS, notes="Puerta cristal"),
-    
-    Order("Placa-1", Rectangle(400, 300), quantity=3, priority=Priority.LOW,
-          material_type=MaterialType.METAL, notes="Placas decorativas")
-]
-```
-
-### 4. Optimizar el corte
-```python
-# Configurar y ejecutar optimización
+# Manual setup required
 optimizer = Optimizer()
-optimizer.set_algorithm(BottomLeftAlgorithm())
+algorithm = BestFitAlgorithm()
+optimizer.set_algorithm(algorithm)
 
+# Run optimization
 result = optimizer.optimize(stocks, orders)
+
+# Manual visualization and reporting
+visualize_cutting_plan(result, stocks, save_path="plan.png")
+report_gen = ReportGenerator()
+report = report_gen.generate_cutting_coordinates_report(result, stocks)
 ```
 
-### 5. Ver resultados
+### ✅ New Way (Simplified)
 ```python
-print(f"📊 Resultados:")
-print(f"• Láminas usadas: {result.total_stock_used}")
-print(f"• Pedidos cumplidos: {result.total_orders_fulfilled}/{len(orders)}")
-print(f"• Eficiencia: {result.efficiency_percentage:.1f}%")
-print(f"• Tiempo: {result.computation_time:.3f} segundos")
+# Single import line - everything you need!
+from surface_optimizer import Stock, Order, MaterialType, Priority, Rectangle, optimize
 
-# Ver pedidos no cumplidos
-if result.unfulfilled_orders:
-    print(f"\n⚠️ No se pudieron cumplir:")
-    for order in result.unfulfilled_orders:
-        print(f"  • {order.id}: {order.shape}")
+# One-line optimization with auto-save
+result = optimize(
+    stocks, orders,
+    priority='balanced',                      # Automatic algorithm selection
+    save_visualization="plan.png",           # Auto-save visualization
+    save_report="report.json"                # Auto-save report
+)
+
+# Easy result display and additional operations
+result.show()                               # Quick summary
+result.visualize()                          # Interactive display
+result.generate_report("coordinates")       # Multiple report types
+result.save_results()                       # Save everything at once
 ```
 
-## 📈 Visualizar Resultados
+---
 
+## 🚀 Ultra-Quick Start (30 seconds)
+
+### 1. Create your data
 ```python
-from surface_optimizer.utils.visualization import visualize_cutting_plan
+from surface_optimizer import Stock, Order, Rectangle, MaterialType, optimize
 
-# Mostrar plan de corte gráficamente
-visualize_cutting_plan(result, stocks)
+# Define available stock
+stocks = [
+    Stock(id="PANEL_1", width=1200, height=800, material_type=MaterialType.WOOD, cost_per_unit=25.0),
+    Stock(id="PANEL_2", width=1000, height=600, material_type=MaterialType.WOOD, cost_per_unit=18.0)
+]
+
+# Define what to cut
+orders = [
+    Order(id="PIECE_1", shape=Rectangle(300, 200), quantity=2, material_type=MaterialType.WOOD),
+    Order(id="PIECE_2", shape=Rectangle(150, 400), quantity=1, material_type=MaterialType.WOOD),
+    Order(id="PIECE_3", shape=Rectangle(250, 250), quantity=3, material_type=MaterialType.WOOD)
+]
 ```
 
-## 🎨 Ejemplo Completo
-
+### 2. Optimize and save everything
 ```python
-from surface_optimizer import Optimizer, Stock, Order
-from surface_optimizer.core.geometry import Rectangle, Circle
-from surface_optimizer.core.models import MaterialType, Priority, OptimizationConfig
-from surface_optimizer.algorithms.basic.bottom_left import BottomLeftAlgorithm
-from surface_optimizer.utils.visualization import visualize_cutting_plan
+# Single line optimization with auto-save
+result = optimize(
+    stocks, orders,
+    save_visualization="cutting_plan.png",
+    save_report="optimization_report.json"
+)
 
-def main():
-    # 1. Materiales disponibles
-    stocks = [
-        Stock("Madera-1", 2440, 1220, 18.0, MaterialType.WOOD, 80.0, "Almacén A"),
-        Stock("Metal-1", 1500, 1000, 3.0, MaterialType.METAL, 120.0, "Almacén B")
-    ]
-    
-    # 2. Pedidos a cortar
-    orders = [
-        Order("Mesa", Rectangle(1200, 800), 1, Priority.URGENT, MaterialType.WOOD),
-        Order("Patas", Rectangle(100, 700), 4, Priority.HIGH, MaterialType.WOOD),
-        Order("Refuerzo", Rectangle(400, 200), 2, Priority.MEDIUM, MaterialType.METAL),
-        Order("Esquinas", Circle(50), 8, Priority.LOW, MaterialType.METAL)
-    ]
-    
-    # 3. Configurar optimización
-    config = OptimizationConfig(
-        allow_rotation=True,      # Permitir rotar piezas
-        cutting_width=3.0,        # 3mm de grosor de corte
-        prioritize_orders=True    # Respetar prioridades
-    )
-    
-    optimizer = Optimizer(config)
-    optimizer.set_algorithm(BottomLeftAlgorithm())
-    
-    # 4. Optimizar
-    result = optimizer.optimize(stocks, orders)
-    
-    # 5. Mostrar resultados
-    print(f"🎯 Optimización completada!")
-    print(f"📊 Eficiencia: {result.efficiency_percentage:.1f}%")
-    print(f"📦 Láminas usadas: {result.total_stock_used}")
-    print(f"✅ Pedidos cumplidos: {result.total_orders_fulfilled}/{len(orders)}")
-    
-    # 6. Visualizar (opcional)
-    visualize_cutting_plan(result, stocks)
-
-if __name__ == "__main__":
-    main()
+# Display results
+result.show()
 ```
 
-## 🎛️ Configuración Básica
+### 3. That's it! 🎉
+You now have:
+- ✅ Optimized cutting plan
+- ✅ Visualization saved as PNG
+- ✅ Complete report saved as JSON
+- ✅ Results displayed in console
 
+---
+
+## 📊 Advanced Features (Still Simple!)
+
+### Different Algorithm Priorities
 ```python
-from surface_optimizer.core.models import OptimizationConfig
+# Speed (fastest)
+result = optimize(stocks, orders, priority='speed')
 
-config = OptimizationConfig(
-    allow_rotation=True,           # ¿Permitir rotar piezas?
-    cutting_width=3.0,            # Grosor del corte (mm)
-    min_waste_size=100.0,         # Tamaño mínimo útil de desperdicio
-    max_computation_time=30.0,    # Tiempo máximo de cálculo (seg)
-    prioritize_orders=True        # ¿Respetar prioridades?
+# Quality (better efficiency)
+result = optimize(stocks, orders, priority='quality')
+
+# Maximum efficiency (best results)
+result = optimize(stocks, orders, priority='maximum')
+```
+
+### Multiple Report Types
+```python
+result = optimize(stocks, orders)
+
+# Different report formats
+cutting_coords = result.generate_report("coordinates", "cuts.json")
+performance = result.generate_report("performance", "metrics.json")
+materials = result.generate_report("material", "materials.json")
+
+# Save everything at once
+result.save_results("my_project", "analysis_v1")
+```
+
+### Interactive Workflow
+```python
+result = optimize(stocks, orders)
+
+# Quick summary
+result.show()
+
+# Show cutting plan (opens window if possible)
+result.visualize()
+
+# Show cutting plan and save
+result.visualize("my_plan.png")
+
+# Complete package
+result.save_results()
+```
+
+### Comparison Mode
+```python
+from surface_optimizer import compare_algorithms
+
+# Compare multiple algorithms easily
+comparison = compare_algorithms(stocks, orders, ['best_fit', 'genetic', 'hybrid'])
+print(comparison)
+```
+
+---
+
+## 🔧 Configuration Options
+
+### Basic Configuration
+```python
+result = optimize(
+    stocks, orders,
+    allow_rotation=True,           # Allow 90° rotation
+    cutting_width=3.0,             # Blade kerf in mm
+    max_computation_time=30,       # Time limit in seconds
+    prioritize_orders=True         # Process by order priority
 )
 ```
 
-## 🔍 Casos de Uso Comunes
-
-### **Vidriería**
+### Custom Output Directories
 ```python
-# Materiales típicos de vidriería
-stocks = [Stock("Cristal-6mm", 3210, 2250, 6.0, MaterialType.GLASS, 25.50)]
-orders = [Order("Ventana", Rectangle(1200, 800), 3, Priority.HIGH, MaterialType.GLASS)]
+result = optimize(
+    stocks, orders,
+    save_visualization="plan.png",
+    save_report="report.json",
+    output_dir="results/project_2023"    # Custom directory
+)
 ```
 
-### **Carpintería** 
+### Advanced Configuration
 ```python
-# Tableros de madera estándar
-stocks = [Stock("MDF-18mm", 2440, 1220, 18.0, MaterialType.WOOD, 35.00)]
-orders = [Order("Estante", Rectangle(800, 300), 4, Priority.MEDIUM, MaterialType.WOOD)]
+from surface_optimizer import OptimizationConfig
+
+config = OptimizationConfig(
+    allow_rotation=True,
+    cutting_width=2.5,
+    max_computation_time=60,
+    prioritize_orders=True,
+    gap_between_pieces=1.0
+)
+
+result = optimize(stocks, orders, config=config)
 ```
 
-### **Metalurgia**
+---
+
+## 🎯 Real-World Example
+
 ```python
-# Láminas de acero
-stocks = [Stock("Acero-3mm", 2000, 1000, 3.0, MaterialType.METAL, 85.00)]
-orders = [Order("Placa", Rectangle(400, 200), 10, Priority.HIGH, MaterialType.METAL)]
+from surface_optimizer import Stock, Order, Rectangle, MaterialType, Priority, optimize
+import pandas as pd
+
+# Load from CSV (typical workflow)
+stock_df = pd.read_csv("inventory.csv")
+stocks = [
+    Stock(
+        id=row['id'],
+        width=row['width'],
+        height=row['height'],
+        material_type=MaterialType.METAL,
+        cost_per_unit=row['cost']
+    )
+    for _, row in stock_df.iterrows()
+]
+
+orders_df = pd.read_csv("cutting_orders.csv")
+orders = [
+    Order(
+        id=row['id'],
+        shape=Rectangle(row['width'], row['height']),
+        quantity=row['qty'],
+        priority=Priority.HIGH if row['urgent'] else Priority.MEDIUM,
+        material_type=MaterialType.METAL
+    )
+    for _, row in orders_df.iterrows()
+]
+
+# Optimize with production settings
+result = optimize(
+    stocks, orders,
+    priority='quality',                    # Focus on efficiency
+    allow_rotation=True,                   # Standard practice
+    cutting_width=3.0,                     # Plasma cutter kerf
+    save_visualization="production_plan.png",
+    save_report="production_report.json",
+    output_dir="production/2023_12_15"
+)
+
+# Display for operator
+result.show()
+print(f"💰 Total cost: ${result.total_cost:.2f}")
+print(f"♻️  Material efficiency: {result.efficiency_percentage:.1f}%")
+print(f"📦 Panels needed: {result.total_stock_used}")
+
+# Generate CNC coordinates
+cnc_data = result.generate_report("coordinates", "cnc_program.json")
 ```
 
-### **Textil**
+---
+
+## 🆚 Migration Guide
+
+### If you're using the old API:
+
+**Replace this:**
 ```python
-# Rollos de tela
-stocks = [Stock("Algodón", 1500, 1000, 2.0, MaterialType.FABRIC, 12.00)]
-orders = [Order("Patrón-A", Rectangle(600, 400), 5, Priority.URGENT, MaterialType.FABRIC)]
+from surface_optimizer.core.models import Stock, Order
+from surface_optimizer.core.optimizer import Optimizer
+from surface_optimizer.algorithms.basic.best_fit import BestFitAlgorithm
+from surface_optimizer.utils.visualization import visualize_cutting_plan
 ```
 
-## ✅ Próximos Pasos
+**With this:**
+```python
+from surface_optimizer import Stock, Order, optimize
+```
 
-1. **Experimenta** con diferentes tamaños y materiales
-2. **Prueba algoritmos** diferentes para comparar resultados
-3. **Visualiza** los planes de corte generados
-4. **Optimiza configuración** según tus necesidades específicas
-5. **Revisa casos de test** conocidos para entender capacidades
+**Replace this:**
+```python
+optimizer = Optimizer()
+optimizer.set_algorithm(BestFitAlgorithm())
+result = optimizer.optimize(stocks, orders)
+visualize_cutting_plan(result, stocks, "plan.png")
+```
 
-## 🔗 Enlaces Útiles
+**With this:**
+```python
+result = optimize(stocks, orders, save_visualization="plan.png")
+result.show()
+```
 
-- **[Casos de Uso Detallados](use_cases.md)** - Ejemplos específicos por industria
-- **[FAQ](faq.md)** - Preguntas frecuentes
-- **[API Reference](../ai/api_reference.md)** - Documentación completa
-- **[Ejemplos Avanzados](../examples/)** - Casos más complejos
+---
+
+## ✨ Key Benefits
+
+1. **🔥 90% fewer import lines** - Just import what you need
+2. **⚡ One-line optimization** - No manual setup required
+3. **💾 Auto-save everything** - Visualization + reports in one go
+4. **🎨 Interactive results** - Built-in display and visualization methods
+5. **📊 Multiple report formats** - Coordinates, performance, materials
+6. **🤖 Smart defaults** - Automatic algorithm selection
+7. **🔄 Backward compatible** - Old API still works
+
+---
+
+## 🚀 What's Next?
+
+1. **Try the demos** - Run `python demo/02_multi_stock_demo.py`
+2. **Check examples** - See `demo/` folder for more use cases
+3. **Read the docs** - Full documentation available
+4. **Join the community** - Report issues and suggestions
+
+The Surface Cutting Optimizer just became **10x easier to use** while remaining just as powerful! 🎉
 
 ---
 

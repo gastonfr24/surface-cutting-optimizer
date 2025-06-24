@@ -10,6 +10,7 @@ Key concepts:
 • Intelligent algorithm selection for priority handling
 • Smart priority-based processing
 • Unfulfilled order reporting
+• SIMPLIFIED API - No complex imports! (NEW!)
 
 Best for: Understanding capacity limits and smart order prioritization
 """
@@ -17,11 +18,8 @@ Best for: Understanding capacity limits and smart order prioritization
 import pandas as pd
 from pathlib import Path
 
-from surface_optimizer.core.models import Stock, Order, MaterialType, Priority
-from surface_optimizer.core.geometry import Rectangle
-from surface_optimizer import optimize
-from surface_optimizer.utils.visualization import visualize_cutting_plan
-from surface_optimizer.reporting.report_generator import ReportGenerator
+# NEW SIMPLIFIED IMPORTS - Only one line needed! 🎉
+from surface_optimizer import Stock, Order, MaterialType, Priority, Rectangle, optimize
 
 
 def load_data_from_csv():
@@ -95,7 +93,7 @@ def analyze_demand_vs_stock(stocks, orders):
 
 
 def run_optimization(stocks, orders):
-    """Run smart optimization with priority-based processing"""
+    """Run smart optimization with priority-based processing (NEW SIMPLIFIED API)"""
     
     print("\n🚀 Smart Priority-Based Optimization")
     print("-" * 38)
@@ -106,25 +104,27 @@ def run_optimization(stocks, orders):
     print("🔄 Processing orders by priority...")
     print("=" * 35)
     
-    # 2. Smart optimization with priority-focused processing
+    # 2. NEW SIMPLIFIED API - Auto-save files! 🎉
     result = optimize(
         stocks, orders,
-        priority='speed',             # Fast algorithms for priority demo
-        allow_rotation=True,          # Allow 90° rotation
-        prioritize_orders=True,       # Key: Process by priority first
-        cutting_width=3.0,            # 3mm blade kerf
-        max_computation_time=10       # Fast processing for overflow demo
+        priority='speed',                             # Fast algorithms for priority demo
+        allow_rotation=True,                          # Allow 90° rotation
+        prioritize_orders=True,                       # Key: Process by priority first
+        cutting_width=3.0,                            # 3mm blade kerf
+        max_computation_time=10,                      # Fast processing for overflow demo
+        save_visualization="overflow_layout.png",    # NEW: Auto-save visualization
+        save_report="overflow_report.json",          # NEW: Auto-save report
+        output_dir="demo/data/03_overflow/results"   # NEW: Specify output directory
     )
     
     print("=" * 35)
+    result.show()  # NEW: Easy result display
     
-    # 3. Show results summary with algorithm used
+    # 3. Show overflow analysis
     total_pieces = sum(order.quantity for order in orders)
     placed_pieces = len(result.placed_shapes)
     discarded_pieces = len(result.unfulfilled_orders)
     
-    print(f"✅ Completed: {result.efficiency_percentage:.1f}% efficiency")
-    print(f"🤖 Algorithm used: {result.metadata['algorithm_selection']['selected_algorithm']}")
     print(f"📦 Placed: {placed_pieces}/{total_pieces} pieces")
     print(f"❌ Discarded: {discarded_pieces} pieces")
     
@@ -181,54 +181,56 @@ def analyze_results(result, orders):
     print("   Lower priority orders more likely to be discarded")
 
 
-def save_results(result, stocks):
-    """Save overflow results including unfulfilled orders report"""
+def show_advanced_features(result, stocks, orders):
+    """Show the new advanced convenience features (NEW)"""
     
-    print("\n💾 Saving Overflow Results")
-    print("-" * 26)
+    print("\n🎨 NEW Advanced Features Demo")
+    print("-" * 31)
     
-    # 1. Create output directory
+    # Create results directory
     results_dir = Path(__file__).parent.parent / "demo" / "data" / "03_overflow" / "results"
     results_dir.mkdir(parents=True, exist_ok=True)
     
-    # 2. Generate layout showing only placed pieces
-    visualize_cutting_plan(result, stocks, save_path="overflow_layout.png", output_dir=str(results_dir))
-    print("✅ overflow_layout.png - Only placed pieces shown")
+    # 1. Generate overflow-specific reports (NEW)
+    print("📊 Generating unfulfilled orders report...")
+    coord_data = result.generate_report("coordinates", "cutting_coordinates.json", str(results_dir))
     
-    # 3. Generate comprehensive report including unfulfilled orders
-    report_gen = ReportGenerator()
-    cutting_report = report_gen.generate_cutting_coordinates_report(result, stocks)
+    print("📈 Generating performance analysis...")
+    perf_data = result.generate_report("performance", "performance_analysis.json", str(results_dir))
     
-    import json
-    report_path = results_dir / "overflow_report.json"
-    with open(report_path, 'w') as f:
-        json.dump({
-            "summary": cutting_report.summary,
-            "cutting_plan": cutting_report.cutting_plan,
-            "unfulfilled_orders": [
-                {
-                    "order_id": order.id,
-                    "dimensions": f"{order.shape.width}x{order.shape.height}mm",
-                    "area_mm2": order.shape.area(),
-                    "reason": "No space available"
-                }
-                for order in result.unfulfilled_orders
-            ],
-            "generated_date": cutting_report.generation_date.isoformat()
-        }, f, indent=2)
+    print("🔍 Generating material breakdown...")
+    material_data = result.generate_report("material", "material_breakdown.json", str(results_dir))
     
-    print("✅ overflow_report.json - Includes unfulfilled orders")
-    print(f"📁 Files saved to: {results_dir}")
+    # 2. Save everything at once (NEW convenience method)
+    print("💾 Saving complete overflow analysis...")
+    result.save_results(str(results_dir), "overflow_analysis")
+    
+    print(f"✅ All files saved to: {results_dir}")
+    
+    # 3. Display overflow metrics
+    total_orders = len([o for order in orders for _ in range(order.quantity)])
+    fulfilled_orders = len(result.placed_shapes)
+    unfulfilled_orders = len(result.unfulfilled_orders)
+    
+    print(f"\n📊 Overflow Impact Analysis:")
+    print(f"   • Orders requested: {total_orders}")
+    print(f"   • Orders fulfilled: {fulfilled_orders}")
+    print(f"   • Orders discarded: {unfulfilled_orders}")
+    print(f"   • Fulfillment rate: {(fulfilled_orders/total_orders*100):.1f}%")
+    print(f"   • Algorithm efficiency: {result.efficiency_percentage:.1f}%")
+    
+    return coord_data, perf_data, material_data
 
 
 def main():
-    """Demo 3: Overflow handling workflow - Understanding capacity limits"""
+    """Demo 3: Overflow handling workflow with NEW simplified API"""
     
     print("🎯 Demo 3: Smart Overflow Handling")
     print("=" * 35)
-    print("📋 Workflow: Capacity analysis → Smart priority processing → Results analysis")
+    print("📋 Workflow: Demand > Stock → Priority processing → Smart discarding")
+    print("🆕 NEW: Simplified API - no complex imports!")
     
-    # Step 1: Load overflow test data  
+    # Step 1: Load overflow test data
     stocks, orders = load_data_from_csv()
     if not stocks or not orders:
         return
@@ -236,24 +238,29 @@ def main():
     # Step 2: Analyze capacity vs demand
     analyze_demand_vs_stock(stocks, orders)
     
-    # Step 3: Run priority-based optimization
+    # Step 3: Run smart priority-based optimization (NEW SIMPLIFIED WAY)
     result = run_optimization(stocks, orders)
     if not result:
         return
     
-    # Step 4: Analyze placement vs discarding patterns
+    # Step 4: Analyze placement vs discarding results
     analyze_results(result, orders)
     
-    # Step 5: Save results with unfulfilled report
-    save_results(result, stocks)
+    # Step 5: Show advanced features (NEW)
+    coord_data, perf_data, material_data = show_advanced_features(result, stocks, orders)
     
     print("\n✅ Overflow demo completed!")
-    print("\n🚀 Next demo:")
-    print("   • 04_priority_sorting_demo.py - Advanced priority handling")
-    print("\n💡 Key learnings:")
-    print("   • High priority orders get processed first")
-    print("   • Lower priorities more likely to be discarded")
-    print("   • Unfulfilled orders are tracked and reported")
+    print("\n🎉 NEW FEATURES USED:")
+    print("   • ✅ Single import line (surface_optimizer)")
+    print("   • ✅ Auto-save visualization and reports")
+    print("   • ✅ Built-in result.show() method")
+    print("   • ✅ Overflow-specific analysis")
+    print("   • ✅ Complete result.save_results() package")
+    
+    print("\n🚀 Next demos:")
+    print("   • 04_priority_sorting_demo.py - Priority handling details")
+    print("   • 05_reports_and_charts_demo.py - Advanced reporting (NEW!)")
+    print("\n💡 Key learning: Smart algorithms respect priorities even under overflow!")
 
 
 if __name__ == "__main__":
