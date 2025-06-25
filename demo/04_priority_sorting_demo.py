@@ -1,192 +1,317 @@
 #!/usr/bin/env python3
 """
-Demo 4: Smart Priority Sorting & Tie-Breaking - Advanced order processing
-=========================================================================
+Demo 4: Smart Priority Sorting - Order prioritization with limited stock
+========================================================================
 
-🎯 Shows smart configurable tie-breaking when orders have same priority
+🎯 Shows how priority system handles demand overflow scenarios
 
 Key concepts:
-• Smart algorithm selection with custom sorting
-• Priority-first processing (URGENT > HIGH > MEDIUM > LOW)
-• Configurable tie-breaking criteria (area, quantity, etc.)
-• Secondary sorting for complex scenarios
-• Professional results with intelligent optimization
+• Priority-based order processing (HIGH > MEDIUM > LOW)
+• Stock capacity vs demand analysis
+• Intelligent order discarding when stock is insufficient
+• Visual reports showing which orders were fulfilled/discarded
 • SIMPLIFIED API - No complex imports! (NEW!)
 
-Best for: Understanding advanced priority handling and smart optimization control
+Best for: Understanding priority handling and capacity management
 """
 
 import pandas as pd
+from pathlib import Path
 
 # NEW SIMPLIFIED IMPORTS - Only one line needed! 🎉
-from surface_optimizer import Stock, Order, MaterialType, Priority, Rectangle, optimize, OrderSortCriteria
+from surface_optimizer import Stock, Order, MaterialType, Priority, Rectangle, optimize
 
-def create_test_data():
-    """Create test scenario with same-priority orders to demonstrate tie-breaking"""
-    
-    print("📂 Creating Test Data")
-    print("-" * 21)
-    
-    # 1. Single stock panel (limited capacity)
-    stock = Stock(
-        id="PANEL_001",
-        width=1000,
-        height=800,
-        material_type=MaterialType.GLASS,
-        cost_per_unit=50.0
-    )
-    print(f"📦 Stock: {stock.width}×{stock.height}mm = {stock.area:,} mm²")
-    
-    # 2. Orders with SAME priority but different characteristics
-    orders = [
-        Order("ORDER_A", Rectangle(300, 200), 1, Priority.HIGH, MaterialType.GLASS),  # 60,000 mm²
-        Order("ORDER_B", Rectangle(500, 400), 1, Priority.HIGH, MaterialType.GLASS),  # 200,000 mm² (largest)
-        Order("ORDER_C", Rectangle(150, 100), 2, Priority.HIGH, MaterialType.GLASS),  # 15,000 mm² each (highest qty)
-        Order("ORDER_D", Rectangle(250, 300), 1, Priority.HIGH, MaterialType.GLASS),  # 75,000 mm²
-        Order("ORDER_E", Rectangle(100, 100), 1, Priority.MEDIUM, MaterialType.GLASS), # 10,000 mm² (different priority)
-    ]
-    
-    print(f"📋 Orders:")
-    for order in orders:
-        area = order.shape.area() * order.quantity
-        print(f"   {order.id}: {area:,} mm² [{order.priority.name}] (qty: {order.quantity})")
-    
-    total_demand = sum(o.shape.area() * o.quantity for o in orders)
-    print(f"\n💡 Total demand: {total_demand:,} mm² vs {stock.area:,} mm² available")
-    
-    return [stock], orders
 
-def test_sorting_criteria(stocks, orders):
-    """Demonstrate different tie-breaking strategies with smart optimization (NEW SIMPLIFIED API)"""
+def load_data_from_csv():
+    """Load limited stock and high-demand orders from CSV"""
     
-    print("\n🧪 Smart Tie-Breaking Strategy Comparison")
-    print("-" * 44)
+    print("📂 Loading Priority Test Data")
+    print("-" * 30)
     
-    # Define test configurations showing different tie-breaking approaches
-    test_configs = [
-        ("CSV Order", OrderSortCriteria.CSV_ORDER, None),
-        ("Area Descending", OrderSortCriteria.AREA_DESC, None),
-        ("Area Ascending", OrderSortCriteria.AREA_ASC, None),
-        ("Quantity First", OrderSortCriteria.QUANTITY_DESC, None),
-        ("Area + Quantity", OrderSortCriteria.AREA_DESC, OrderSortCriteria.QUANTITY_DESC)
-    ]
+    # 1. Load limited stock (designed for overflow scenario)
+    data_path = Path(__file__).parent / "data" / "04_priority"
     
-    results = []
-    
-    for name, primary_criteria, secondary_criteria in test_configs:
-        print(f"\n🔄 Strategy: {name}")
-        print(f"   🤖 Using smart algorithm selection with custom sorting")
-        
-        # 1. NEW SIMPLIFIED API - Use smart optimization with specific sorting criteria
-        result = optimize(
-            stocks, orders,
-            priority='speed',                      # Fast algorithms for comparison
-            prioritize_orders=True,               # Enable priority processing
-            order_sort_criteria=primary_criteria, # Primary tie-breaking
-            secondary_sort_criteria=secondary_criteria, # Secondary tie-breaking
-            allow_rotation=True,
-            cutting_width=3.0,
-            save_visualization=f"priority_sort_{name.lower().replace(' ', '_')}.png",  # NEW: Auto-save each test
-            output_dir="demo/data/04_priority/results"  # NEW: Specify output directory
+    stock_df = pd.read_csv(data_path / "priority_stock.csv")
+    stocks = [
+        Stock(
+            id=row['stock_id'],
+            width=row['width'], 
+            height=row['height'],
+            material_type=MaterialType.METAL,
+            cost_per_unit=row['cost']
         )
-        
-        # 2. Show results summary
-        placed = [ps.order_id.split('_')[0] for ps in result.placed_shapes]
-        unfulfilled = [uo.id.split('_')[0] for uo in result.unfulfilled_orders]
-        
-        print(f"   📊 Algorithm: {result.metadata['algorithm_selection']['selected_algorithm']}")
-        print(f"   ✅ Placed: {', '.join(placed)}")
-        if unfulfilled:
-            print(f"   ❌ Discarded: {', '.join(unfulfilled)}")
-        print(f"   📊 Efficiency: {result.efficiency_percentage:.1f}%")
-        
-        results.append((name, result))
+        for _, row in stock_df.iterrows()
+    ]
     
-    return results
+    # 2. Load orders with different priorities (designed to exceed capacity)
+    orders_df = pd.read_csv(data_path / "priority_orders.csv")
+    orders = [
+        Order(
+            id=row['order_id'],
+            shape=Rectangle(row['width'], row['height']),
+            quantity=row['quantity'],
+            priority=Priority.HIGH if row['priority'] == 'HIGH' 
+                    else Priority.MEDIUM if row['priority'] == 'MEDIUM'
+                    else Priority.LOW,
+            material_type=MaterialType.METAL
+        )
+        for _, row in orders_df.iterrows()
+    ]
+    
+    print(f"✅ Loaded {len(stocks)} stock panels, {len(orders)} orders")
+    
+    # 3. Show capacity analysis
+    total_stock_area = sum(s.width * s.height for s in stocks)
+    total_demand_area = sum(o.shape.width * o.shape.height * o.quantity for o in orders)
+    
+    print(f"\n💡 Capacity Analysis:")
+    print(f"   📦 Total stock: {total_stock_area:,} mm²")
+    print(f"   📋 Total demand: {total_demand_area:,} mm²")
+    print(f"   ⚠️  Overflow: {(total_demand_area/total_stock_area):.1f}x demand vs capacity")
+    
+    # 4. Show orders by priority
+    print(f"\n📋 Orders by priority:")
+    for priority in ['HIGH', 'MEDIUM', 'LOW']:
+        priority_orders = [o for o in orders if o.priority.name == priority]
+        if priority_orders:
+            total_pieces = sum(o.quantity for o in priority_orders)
+            print(f"   🔥 {priority}: {len(priority_orders)} orders, {total_pieces} pieces")
+    
+    return stocks, orders
 
-def show_advanced_features(results, stocks, orders):
+
+def analyze_demand_vs_stock(stocks, orders):
+    """Analyze capacity and predict overflow scenario"""
+    
+    print("\n📊 Detailed Capacity Analysis")
+    print("-" * 32)
+    
+    # 1. Calculate areas
+    stock_area = sum(s.width * s.height for s in stocks)
+    demand_area = sum(o.shape.width * o.shape.height * o.quantity for o in orders)
+    
+    # 2. Show overflow prediction
+    if demand_area > stock_area:
+        overflow_ratio = demand_area / stock_area
+        excess_area = demand_area - stock_area
+        print(f"🚨 OVERFLOW SCENARIO:")
+        print(f"   • Demand exceeds capacity by {overflow_ratio:.1f}x")
+        print(f"   • {excess_area:,} mm² of orders will be discarded")
+        print(f"   • Priority system will determine which orders survive")
+    else:
+        utilization = (demand_area / stock_area) * 100
+        print(f"✅ SUFFICIENT CAPACITY:")
+        print(f"   • Expected utilization: {utilization:.1f}%")
+        print(f"   • All orders should fit")
+    
+    return stock_area, demand_area
+
+
+def run_optimization(stocks, orders):
+    """Run priority-based optimization (NEW SIMPLIFIED API)"""
+    
+    print("\n🚀 Priority-Based Optimization")
+    print("-" * 32)
+    
+    # 1. Use smart optimization with priority processing
+    print("🤖 Using intelligent algorithm selection")
+    print("📊 Priority: 'speed' (best for priority scenarios)")
+    print("🎯 Processing orders by priority: HIGH → MEDIUM → LOW")
+    print("=" * 45)
+    
+    # 2. NEW SIMPLIFIED API - Auto-save files! 🎉
+    result = optimize(
+        stocks, orders,
+        priority='speed',                             # Fast algorithms for priority demo
+        allow_rotation=True,                          # Allow 90° rotation
+        prioritize_orders=True,                       # Key: Process by priority first
+        cutting_width=3.0,                            # 3mm blade kerf
+        max_computation_time=15,                      # Quick processing
+        save_visualization="priority_layout.png",    # NEW: Auto-save visualization
+        save_report="priority_report.json",          # NEW: Auto-save report
+        output_dir="demo/outputs/04_priority/results"  # Correct path pattern
+    )
+    
+    print("=" * 45)
+    result.show()  # NEW: Easy result display
+    
+    return result
+
+
+def analyze_priority_results(result, orders):
+    """Analyze which orders were placed vs discarded by priority"""
+    
+    print("\n📊 Priority Fulfillment Analysis")
+    print("-" * 33)
+    
+    # 1. Group orders by priority and status
+    placed_order_ids = set()
+    for placed in result.placed_shapes:
+        # Extract base order ID (remove piece suffix)
+        base_id = placed.order_id.split('_piece_')[0] if '_piece_' in placed.order_id else placed.order_id
+        placed_order_ids.add(base_id)
+    
+    priority_stats = {}
+    for priority in ['HIGH', 'MEDIUM', 'LOW']:
+        priority_orders = [o for o in orders if o.priority.name == priority]
+        fulfilled = [o for o in priority_orders if o.id in placed_order_ids]
+        discarded = [o for o in priority_orders if o.id not in placed_order_ids]
+        
+        priority_stats[priority] = {
+            'fulfilled': fulfilled,
+            'discarded': discarded,
+            'total': priority_orders
+        }
+    
+    # 2. Display results by priority
+    for priority in ['HIGH', 'MEDIUM', 'LOW']:
+        stats = priority_stats[priority]
+        if not stats['total']:
+            continue
+            
+        fulfilled_pieces = sum(o.quantity for o in stats['fulfilled'])
+        discarded_pieces = sum(o.quantity for o in stats['discarded'])
+        total_pieces = fulfilled_pieces + discarded_pieces
+        
+        print(f"\n🔥 {priority} PRIORITY:")
+        print(f"   ✅ Fulfilled: {len(stats['fulfilled'])}/{len(stats['total'])} orders, {fulfilled_pieces} pieces")
+        print(f"   ❌ Discarded: {len(stats['discarded'])} orders, {discarded_pieces} pieces")
+        
+        if total_pieces > 0:
+            survival_rate = (fulfilled_pieces / total_pieces) * 100
+            print(f"   📈 Survival rate: {survival_rate:.1f}%")
+    
+    return priority_stats
+
+
+def generate_priority_management_report(result, stocks, orders):
+    """Generate management report with priority analysis and visual summary"""
+    
+    print("\n📊 Generating Priority Management Report")
+    print("-" * 42)
+    
+    # Create output directory
+    output_dir = "demo/outputs/04_priority/management"
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    
+    # 1. Generate PNG report with visual summary (simple way)
+    print("🖼️  Creating visual summary image...")
+    
+    try:
+        result.management_report("priority_visual_summary.png", output_dir,
+                                figsize=(16, 12),
+                                dpi=200,
+                                format='png',
+                                theme='professional',
+                                show_detailed_info=True)
+        print("   ✅ PNG Summary: Visual layout + priority analysis")
+    
+    except Exception as e:
+        print(f"   ⚠️  PNG issue: {e}")
+    
+    # 2. Generate PDF version for professional use
+    print("📄 Creating PDF executive summary...")
+    
+    try:
+        result.management_report("priority_executive_summary.pdf", output_dir,
+                                figsize=(14, 10),
+                                dpi=300,
+                                format='pdf',
+                                theme='professional',
+                                show_detailed_info=True)
+        print("   ✅ Executive PDF: Professional priority report")
+    
+    except Exception as e:
+        print(f"   ⚠️  PDF issue: {e}")
+    
+    print(f"\n📁 Management reports saved to: {output_dir}")
+    
+    return output_dir
+
+
+def show_advanced_features(result, stocks, orders):
     """Show the new advanced convenience features (NEW)"""
     
-    print("\n🎨 NEW Advanced Features Demo")
-    print("-" * 31)
+    print("\n🎨 Advanced Features Demo")
+    print("-" * 26)
     
     # Create results directory
-    from pathlib import Path
-    results_dir = Path(__file__).parent.parent / "demo" / "data" / "04_priority" / "results"
+    results_dir = Path("demo/outputs/04_priority/results")
     results_dir.mkdir(parents=True, exist_ok=True)
     
-    # 1. Pick the best result for detailed analysis
-    best_result = max(results, key=lambda x: x[1].efficiency_percentage)
-    best_name, best_result_obj = best_result
+    # 1. Save layout visualization only
+    print("💾 Saving layout visualization...")
+    result.save_results(str(results_dir), "priority_analysis")
     
-    print(f"📊 Detailed analysis of best strategy: {best_name}")
+    print(f"✅ Files saved to: {results_dir}")
     
-    # 2. Generate comprehensive reports (NEW)
-    print("📊 Generating detailed performance analysis...")
-    coord_data = best_result_obj.generate_report("coordinates", "best_strategy_coordinates.json", str(results_dir))
+    # 2. Display key insights
+    print(f"\n📊 Key Priority Insights:")
+    print(f"   • Efficiency: {result.efficiency_percentage:.1f}%")
+    print(f"   • Panels used: {result.total_stock_used}/{len(stocks)}")
+    print(f"   • Total cost: ${result.total_cost:.2f}")
+    print(f"   • Orders fulfilled: {result.total_orders_fulfilled}")
+    print(f"   • Algorithm: {result.algorithm_used}")
     
-    print("📈 Generating performance comparison...")
-    perf_data = best_result_obj.generate_report("performance", "performance_analysis.json", str(results_dir))
-    
-    print("🔍 Generating material breakdown...")
-    material_data = best_result_obj.generate_report("material", "material_breakdown.json", str(results_dir))
-    
-    # 3. Save everything at once (NEW convenience method)
-    print("💾 Saving complete priority analysis...")
-    best_result_obj.save_results(str(results_dir), "priority_analysis")
-    
-    print(f"✅ All files saved to: {results_dir}")
-    
-    # 4. Display comparison summary
-    print(f"\n📊 Strategy Comparison Summary:")
-    for name, result in results:
-        print(f"   • {name}: {result.efficiency_percentage:.1f}% efficiency")
-    
-    print(f"\n🏆 Best Strategy: {best_name} ({best_result_obj.efficiency_percentage:.1f}% efficiency)")
-    
-    return coord_data, perf_data, material_data
+    return results_dir
+
 
 def main():
-    """Demo 4: Advanced priority sorting with configurable tie-breaking (NEW SIMPLIFIED API)"""
+    """Demo 4: Priority-based optimization with stock limitations"""
     
-    print("🎯 Demo 4: Smart Priority Sorting & Tie-Breaking")
-    print("=" * 49)
-    print("📋 Workflow: Test data → Smart tie-breaking strategies → Results comparison")
+    print("🎯 Demo 4: Smart Priority Sorting")
+    print("=" * 34)
+    print("📋 Workflow: Limited stock → Priority processing → Smart discarding")
     print("🆕 NEW: Simplified API - no complex imports!")
     
-    # Step 1: Create test scenario with same-priority orders
-    stocks, orders = create_test_data()
+    # Step 1: Load data designed for overflow scenario
+    stocks, orders = load_data_from_csv()
+    if not stocks or not orders:
+        return
     
-    # Step 2: Compare different tie-breaking strategies (NEW SIMPLIFIED WAY)
-    results = test_sorting_criteria(stocks, orders)
+    # Step 2: Analyze capacity vs demand
+    stock_area, demand_area = analyze_demand_vs_stock(stocks, orders)
     
-    # Step 3: Show advanced features (NEW)
-    coord_data, perf_data, material_data = show_advanced_features(results, stocks, orders)
+    # Step 3: Run priority-based optimization (NEW SIMPLIFIED WAY)
+    result = run_optimization(stocks, orders)
+    if not result:
+        return
     
-    # Step 4: Show key insights
-    print(f"\n💡 Key Insights:")
-    print(f"   • Priority is ALWAYS processed first (URGENT → HIGH → MEDIUM → LOW)")
-    print(f"   • Tie-breaking only applies within same priority level")
-    print(f"   • Area-based sorting often improves space utilization")
-    print(f"   • Quantity-first helps fulfill more orders")
-    print(f"   • Combined criteria offer fine-grained control")
+    # Step 4: Analyze priority fulfillment
+    priority_stats = analyze_priority_results(result, orders)
     
-    print(f"\n✅ Priority sorting demo completed!")
+    # Step 5: Generate management report with visual summary
+    mgmt_dir = generate_priority_management_report(result, stocks, orders)
+    
+    # Step 6: Show advanced features (NEW)
+    results_dir = show_advanced_features(result, stocks, orders)
+    
+    print("\n✅ Priority sorting demo completed!")
     print("\n🎉 NEW FEATURES USED:")
     print("   • ✅ Single import line (surface_optimizer)")
-    print("   • ✅ Auto-save visualization for each strategy")
+    print("   • ✅ Priority-based order processing")
+    print("   • ✅ Auto-save visualization and reports")
     print("   • ✅ Built-in result.show() method")
-    print("   • ✅ Strategy comparison analysis")
+    print("   • ✅ Management report with priority analysis")
+    print("   • ✅ Visual summary PNG with stock usage")
     print("   • ✅ Complete result.save_results() package")
     
-    print(f"\n🔧 Configuration options:")
-    print(f"   • OrderSortCriteria.AREA_DESC (default)")
-    print(f"   • OrderSortCriteria.QUANTITY_DESC")
-    print(f"   • OrderSortCriteria.CSV_ORDER")
-    print(f"   • Plus secondary_sort_criteria for hybrid approaches")
+    print(f"\n💡 Key Learnings:")
+    print(f"   • Priority system protects critical orders")
+    print(f"   • Higher priority orders processed first")
+    print(f"   • Smart discarding when capacity is exceeded")
+    print(f"   • Visual reports show fulfillment by priority")
+    print(f"   • Management reports include stock utilization")
     
-    print("\n🚀 Next demo:")
-    print("   • 05_reports_and_charts_demo.py - Advanced reporting (NEW!)")
+    print(f"\n📁 Generated Files:")
+    print(f"   • Executive PDF: {mgmt_dir}/priority_executive_summary.pdf")
+    print(f"   • Visual Summary: {mgmt_dir}/priority_visual_summary.png")
+    print(f"   • Layout Image: demo/outputs/04_priority/results/priority_layout.png")
+    
+    print("\n🚀 Next demos:")
+    print("   • 05_reports_demo.py - Advanced reporting")
+    print("   • 06_visualization_demo.py - Custom visualizations")
+
 
 if __name__ == "__main__":
-    main() 
+    main()

@@ -1,0 +1,25 @@
+{
+  "material_breakdown": {
+    "metal": {
+      "used_area": 1283200,
+      "total_area": 1710000,
+      "cost": 55.75,
+      "pieces": 18,
+      "stocks_used": [
+        "PANEL_B",
+        "PANEL_E",
+        "PANEL_C"
+      ],
+      "stocks_count": 3
+    }
+  },
+  "waste_by_material": {
+    "metal": 24.95906432748538
+  },
+  "cost_by_material": {
+    "metal": 55.75
+  },
+  "efficiency_by_material": {
+    "metal": 75.04093567251462
+  }
+}

@@ -1,0 +1,9 @@
+stock_id,width,height,material,cost
+STOCK_A,1000,800,Metal,45.00
+STOCK_B,800,600,Metal,30.00
+STOCK_C,1200,900,Metal,30.0
+STOCK_D,900,700,Metal,28.0
+STOCK_E,1100,850,Metal,32.0
+STOCK_F,950,750,Metal,29.0
+STOCK_G,1050,800,Metal,31.0
+STOCK_H,800,650,Metal,27.0 

@@ -76,6 +76,28 @@ class Optimizer:
                 self.logger.log_validation("configuration", 1, config_issues)
                 raise OptimizationError(f"Invalid configuration: {'; '.join(config_issues)}")
             
+            # Handle empty orders case early
+            if not orders:
+                self.logger.info("   ℹ️  No orders to process - returning empty result")
+                empty_result = CuttingResult()
+                empty_result.computation_time = time.time() - time.time()
+                empty_result.efficiency_percentage = 0.0
+                empty_result.total_stock_used = 0
+                empty_result.total_orders_fulfilled = 0
+                empty_result.total_cost = 0.0
+                empty_result.placed_shapes = []
+                empty_result.unfulfilled_orders = []
+                
+                # Store empty result for reporting
+                self._last_result = empty_result
+                self._last_stocks = stocks
+                self._last_orders = orders
+                self.optimization_history.append(empty_result)
+                
+                self.logger.end_operation("optimize", success=True, 
+                                        result={"message": "No orders to process"})
+                return empty_result
+            
             # Validate inputs
             try:
                 stock_issues = []
@@ -92,7 +114,8 @@ class Optimizer:
                 
                 validate_stocks(stocks)
                 validate_orders(orders)
-                validate_stock_order_compatibility(stocks, orders)
+                if orders:  # Only validate compatibility if there are orders
+                    validate_stock_order_compatibility(stocks, orders)
                 
             except ValidationError as e:
                 self.logger.end_operation("optimize", success=False, 
@@ -230,7 +253,7 @@ class Optimizer:
         Returns:
             Report data as dictionary or file path for advanced reports
         """
-        if not self._last_result or not self._last_stocks or not self._last_orders:
+        if not self._last_result:
             print("❌ No optimization result to report. Run optimize() first.")
             return {}
         
@@ -239,16 +262,17 @@ class Optimizer:
             report_gen = ReportGenerator()
             
             # 🚀 ADVANCED REPORT HANDLING
-            if config is not None:
-                # Use advanced report generation with full customization
+            if config is not None and not isinstance(config, dict):
+                # Advanced ReportConfig object - use new system
+                from ..reporting.report_generator import ReportFormat
+                
                 if not save_path:
                     print("⚠️ Advanced reports require save_path. Defaulting to 'advanced_report'")
                     save_path = "advanced_report"
                 
-                # Determine extension based on format
                 format_extensions = {
                     ReportFormat.JSON: ".json",
-                    ReportFormat.HTML: ".html", 
+                    ReportFormat.HTML: ".html",
                     ReportFormat.PDF: ".pdf",
                     ReportFormat.EXCEL: ".xlsx",
                     ReportFormat.CSV: ".csv",
@@ -305,6 +329,82 @@ class Optimizer:
                         "cost_by_material": report.cost_by_material,
                         "efficiency_by_material": report.efficiency_by_material
                     }
+                elif format == "html":
+                    # Generate HTML report
+                    cutting_report = report_gen.generate_cutting_report(
+                        self._last_result, self._last_stocks, self._last_orders, "Optimization Report"
+                    )
+                    performance_report = report_gen.generate_performance_report(self._last_result)
+                    
+                    # Create HTML content
+                    html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{cutting_report.title}</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }}
+        .container {{ max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+        h1 {{ color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; }}
+        h2 {{ color: #34495e; margin-top: 30px; }}
+        .metric {{ background: #ecf0f1; padding: 15px; margin: 10px 0; border-radius: 5px; }}
+        .metric strong {{ color: #2980b9; }}
+        .efficiency {{ font-size: 1.2em; color: #27ae60; font-weight: bold; }}
+        .cost {{ color: #e74c3c; font-weight: bold; }}
+        table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+        th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }}
+        th {{ background-color: #3498db; color: white; }}
+        .footer {{ margin-top: 30px; text-align: center; color: #7f8c8d; font-size: 0.9em; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>{cutting_report.title}</h1>
+        <p><strong>Generated:</strong> {cutting_report.generation_date.strftime('%Y-%m-%d %H:%M:%S')}</p>
+        
+        <h2>📊 Performance Summary</h2>
+        <div class="metric">
+            <strong>Overall Efficiency:</strong> 
+            <span class="efficiency">{performance_report.efficiency_metrics['overall_efficiency']:.1f}%</span>
+        </div>
+        <div class="metric">
+            <strong>Material Utilization:</strong> {performance_report.efficiency_metrics['material_utilization']:.1f}%
+        </div>
+        <div class="metric">
+            <strong>Fulfillment Rate:</strong> {performance_report.fulfillment_analysis['fulfillment_rate']:.1f}%
+        </div>
+        
+        <h2>💰 Cost Analysis</h2>
+        <div class="metric">
+            <strong>Total Cost:</strong> 
+            <span class="cost">${performance_report.cost_analysis['total_cost']:.2f}</span>
+        </div>
+        <div class="metric">
+            <strong>Cost per Area:</strong> ${performance_report.cost_analysis['cost_per_area']:.2f}/m²
+        </div>
+        <div class="metric">
+            <strong>Waste Cost:</strong> 
+            <span class="cost">${performance_report.waste_analysis['total_waste_cost']:.2f}</span>
+        </div>
+        
+        <h2>📋 Summary Statistics</h2>
+        <table>
+            <tr><th>Metric</th><th>Value</th></tr>
+            <tr><td>Total Stocks</td><td>{cutting_report.metadata.get('total_stocks', 0)}</td></tr>
+            <tr><td>Total Orders</td><td>{cutting_report.metadata.get('total_orders', 0)}</td></tr>
+            <tr><td>Orders Fulfilled</td><td>{performance_report.fulfillment_analysis['orders_fulfilled']}</td></tr>
+            <tr><td>Computation Time</td><td>{performance_report.optimization_time:.3f}s</td></tr>
+            <tr><td>Algorithm Used</td><td>{self._last_result.algorithm_used}</td></tr>
+        </table>
+        
+        <div class="footer">
+            <p>Report generated by Surface Cutting Optimizer</p>
+        </div>
+    </div>
+</body>
+</html>"""
+                    data = html_content
                 else:  # json (full report)
                     cutting_report = report_gen.generate_cutting_report(
                         self._last_result, self._last_stocks, self._last_orders, "Optimization Report"
@@ -328,13 +428,21 @@ class Optimizer:
                 
                 # Save if requested
                 if save_path:
-                    import json
                     output_path = Path(output_dir)
-                    output_path.mkdir(exist_ok=True)
+                    output_path.mkdir(exist_ok=True, parents=True)  # Create parent directories
                     
                     full_path = output_path / save_path
-                    with open(full_path, 'w') as f:
-                        json.dump(data, f, indent=2)
+                    
+                    if format == "html":
+                        # Save as HTML text file
+                        with open(full_path, 'w', encoding='utf-8') as f:
+                            f.write(data)
+                    else:
+                        # Save as JSON
+                        import json
+                        with open(full_path, 'w') as f:
+                            json.dump(data, f, indent=2)
+                    
                     print(f"✅ Report saved: {full_path}")
                 
                 return data

@@ -34,11 +34,14 @@ from typing import List, Dict, Any
 
 from ...core.models import CuttingResult, OptimizationConfig, PlacedShape, Order, Stock
 from ...core.geometry import Rectangle
+from ...core.exceptions import AlgorithmError, ValidationError
 from ...utils.metrics import calculate_efficiency
 from ...utils.logging import get_logger
+from ...utils.error_handler import get_error_handler, error_context, with_error_handling
 from ..base import BaseAlgorithm
 
 logger = get_logger()
+error_handler = get_error_handler()
 
 
 class FirstFitAlgorithm(BaseAlgorithm):
@@ -95,194 +98,240 @@ class FirstFitAlgorithm(BaseAlgorithm):
             CuttingResult: Result with placed pieces and metrics
 
         Raises:
-            ValueError: If input parameters are invalid
+            AlgorithmError: If algorithm encounters an error during execution
+            ValidationError: If input parameters are invalid
 
         Note:
             The algorithm doesn't guarantee optimal solution, but is very fast.
             For better efficiency results, consider using algorithms
             like Best Fit or Genetic Algorithm.
         """
-        start_time = time.time()
         
-        # Input validation
-        if not stocks or not orders:
-            raise ValueError("Stocks and orders cannot be empty")
-        
-        logger.info(f"🔧 FIRST FIT CONFIGURATION:")
-        logger.info(f"   • Rotation enabled: {config.allow_rotation}")
-        logger.info(f"   • Priority processing: {config.prioritize_orders}")
-        logger.info(f"   • Order sort criteria: {config.order_sort_criteria.value}")
-        if config.secondary_sort_criteria:
-            logger.info(f"   • Secondary sort: {config.secondary_sort_criteria.value}")
-        
-        logger.info(f"🚀 Starting First Fit optimization...")
-        logger.info(f"   • Processing {len(stocks)} stock panels")
-        logger.info(f"   • Processing {len(orders)} orders")
-        
-        # Initialize result
-        placed_shapes = []
-        total_pieces = sum(order.quantity for order in orders)
-        unfulfilled_orders = []
-        
-        # Working copies - convert Stock objects to working format
-        working_stocks = []
-        for i, stock in enumerate(stocks):
-            working_stocks.append({
-                'id': stock.id,  # Use original stock ID instead of index
-                'index': i,      # Keep index for internal calculations
-                'width': stock.width,
-                'height': stock.height, 
-                'cost': stock.cost_per_unit,
-                'material': stock.material_type.value,
-                'occupied_areas': []  # List of placed rectangles
-            })
-        
-        # Preprocess orders (sort by priority and configured criteria)
-        processed_orders = self.preprocess_orders(orders, config)
-        
-        # Process each order - convert Order objects to working format
-        for order in processed_orders:
-            quantity = order.quantity
-            order_id = order.id
+        with error_context("first_fit_optimization", {
+            "stocks_count": len(stocks) if stocks else 0,
+            "orders_count": len(orders) if orders else 0,
+            "algorithm": "first_fit"
+        }):
+            start_time = time.time()
             
-            for piece_num in range(quantity):
-                piece_id = f"{order_id}_{piece_num + 1}"
-                piece_width = order.shape.width
-                piece_height = order.shape.height
-                
-                placed = False
-                
-                # Try to place in each stock (First Fit strategy)
-                for stock in working_stocks:
-                    # Try without rotation
-                    position = self._find_valid_position(
-                        stock, piece_width, piece_height
+            # Input validation with error handling
+            try:
+                if not orders:
+                    # No orders to process
+                    return CuttingResult(
+                        placed_shapes=[],
+                        efficiency_percentage=0.0,
+                        total_stock_used=0,
+                        algorithm_used=self.name,
+                        computation_time=time.time() - start_time,
+                        unfulfilled_orders=[]
                     )
-                    
-                    if position:
-                        x, y = position
-                        self._place_piece(stock, piece_id, x, y, piece_width, piece_height, False)
-                        placed_shapes.append({
-                            'piece_id': piece_id,
-                            'stock_id': stock['id'],
-                            'x': x,
-                            'y': y, 
-                            'width': piece_width,
-                            'height': piece_height,
-                            'rotated': False
-                        })
-                        placed = True
-                        break
-                    
-                    # Try with rotation (if enabled)
-                    if config.allow_rotation and piece_width != piece_height:
-                        position = self._find_valid_position(
-                            stock, piece_height, piece_width
-                        )
-                        
-                        if position:
-                            x, y = position
-                            self._place_piece(stock, piece_id, x, y, piece_height, piece_width, True)
-                            placed_shapes.append({
-                                'piece_id': piece_id,
-                                'stock_id': stock['id'],
-                                'x': x,
-                                'y': y,
-                                'width': piece_height,  # Rotated
-                                'height': piece_width,  # Rotated
-                                'rotated': True
-                            })
-                            placed = True
-                            break
                 
-                # Track unfulfilled pieces
-                if not placed:
-                    unfulfilled_orders.append({
-                        'piece_id': piece_id,
-                        'width': piece_width,
-                        'height': piece_height,
-                        'order_id': order_id,
-                        'reason': 'No space available'
+                if not stocks:
+                    # No stock available - all orders are unfulfilled
+                    unfulfilled_order_objects = []
+                    for order in orders:
+                        for i in range(order.quantity):
+                            unfulfilled_order_objects.append(order)
+                    
+                    return CuttingResult(
+                        placed_shapes=[],
+                        efficiency_percentage=0.0,
+                        total_stock_used=0,
+                        algorithm_used=self.name,
+                        computation_time=time.time() - start_time,
+                        unfulfilled_orders=unfulfilled_order_objects
+                    )
+                
+                # Validate input data
+                for i, stock in enumerate(stocks):
+                    if not hasattr(stock, 'width') or not hasattr(stock, 'height'):
+                        raise ValidationError(f"Stock {i} is missing width or height attributes")
+                    if stock.width <= 0 or stock.height <= 0:
+                        raise ValidationError(f"Stock {i} has invalid dimensions: {stock.width}x{stock.height}")
+                
+                for i, order in enumerate(orders):
+                    if not hasattr(order, 'shape') or not hasattr(order, 'quantity'):
+                        raise ValidationError(f"Order {i} is missing required attributes")
+                    if order.quantity <= 0:
+                        raise ValidationError(f"Order {i} has invalid quantity: {order.quantity}")
+                        
+            except Exception as e:
+                error_handler.handle_error(
+                    e,
+                    context={"stage": "input_validation"},
+                    operation="first_fit_validation",
+                    reraise=True
+                )
+            
+            logger.info(f"🔧 FIRST FIT CONFIGURATION:")
+            logger.info(f"   • Rotation enabled: {config.allow_rotation}")
+            logger.info(f"   • Priority processing: {config.prioritize_orders}")
+            logger.info(f"   • Order sort criteria: {config.order_sort_criteria.value}")
+            if config.secondary_sort_criteria:
+                logger.info(f"   • Secondary sort: {config.secondary_sort_criteria.value}")
+            
+            logger.info(f"🚀 Starting First Fit optimization...")
+            logger.info(f"   • Processing {len(stocks)} stock panels")
+            logger.info(f"   • Processing {len(orders)} orders")
+            
+            try:
+                # Initialize result
+                placed_shapes = []
+                total_pieces = sum(order.quantity for order in orders)
+                unfulfilled_orders = []
+                
+                # Working copies - convert Stock objects to working format
+                working_stocks = []
+                for i, stock in enumerate(stocks):
+                    working_stocks.append({
+                        'id': stock.id,  # Use original stock ID instead of index
+                        'index': i,      # Keep index for internal calculations
+                        'width': stock.width,
+                        'height': stock.height, 
+                        'cost': stock.cost_per_unit,
+                        'material': stock.material_type.value,
+                        'occupied_areas': []  # List of placed rectangles
                     })
-        
-        # Calculate metrics
-        computation_time = time.time() - start_time
-        used_stocks = set(shape['stock_id'] for shape in placed_shapes)
-        
-        # Calculate efficiency
-        total_placed_area = sum(shape['width'] * shape['height'] for shape in placed_shapes)
-        
-        # Create a mapping from stock_id to working_stock for efficiency calculation
-        stock_id_to_working = {ws['id']: ws for ws in working_stocks}
-        total_stock_area = sum(
-            stock_id_to_working[stock_id]['width'] * stock_id_to_working[stock_id]['height']
-            for stock_id in used_stocks
-        )
-        
-        efficiency = (total_placed_area / total_stock_area * 100) if total_stock_area > 0 else 0
-        
-        # Convert placed_shapes to PlacedShape objects
-        placed_shape_objects = []
-        for shape_data in placed_shapes:
-            # Create Rectangle shape for the placed piece
-            rect = Rectangle(
-                width=shape_data['width'],
-                height=shape_data['height'],
-                x=shape_data['x'],
-                y=shape_data['y']
-            )
-            
-            placed_shape = PlacedShape(
-                order_id=shape_data['piece_id'],
-                shape=rect,
-                stock_id=shape_data['stock_id'],  # Already a string (original stock ID)
-                rotation_applied=90.0 if shape_data['rotated'] else 0.0
-            )
-            placed_shape_objects.append(placed_shape)
-        
-        # Convert unfulfilled_orders to Order objects (simplified)
-        unfulfilled_order_objects = []
-        for order_data in unfulfilled_orders:
-            # Create a simple rectangle for the unfulfilled order
-            rect = Rectangle(order_data['width'], order_data['height'], 0, 0)
-            order = Order(
-                id=order_data['order_id'],
-                shape=rect,
-                quantity=1
-            )
-            unfulfilled_order_objects.append(order)
-        
-        logger.info(f"✅ OPTIMIZATION COMPLETED:")
-        logger.info(f"   • Pieces placed: {len(placed_shapes)}/{total_pieces}")
-        logger.info(f"   • Efficiency: {efficiency:.1f}%")
-        logger.info(f"   • Stocks used: {len(used_stocks)}/{len(stocks)}")
-        logger.info(f"   • Computation time: {computation_time:.3f}s")
-        
-        # Add efficiency interpretation
-        if efficiency >= 80:
-            logger.info(f"   🌟 Excellent efficiency - minimal waste")
-        elif efficiency >= 60:
-            logger.info(f"   👍 Good efficiency - reasonable material usage")
-        elif efficiency >= 40:
-            logger.info(f"   ⚡ Moderate efficiency - consider other algorithms")
-        else:
-            logger.warning(f"   ⚠️  Low efficiency - manual optimization may be needed")
-            
-        # Log unfulfilled pieces
-        unfulfilled_count = len(unfulfilled_orders)
-        if unfulfilled_count > 0:
-            logger.warning(f"   ❌ {unfulfilled_count} pieces could not be placed")
-        else:
-            logger.info(f"   ✅ All pieces successfully placed")
-        
-        return CuttingResult(
-            placed_shapes=placed_shape_objects,
-            efficiency_percentage=efficiency,
-            total_stock_used=len(used_stocks),
-            algorithm_used=self.name,
-            computation_time=computation_time,
-            unfulfilled_orders=unfulfilled_order_objects
-        )
+                
+                # Preprocess orders (sort by priority and configured criteria)
+                processed_orders = self.preprocess_orders(orders, config)
+                
+                # Process each order - convert Order objects to working format
+                for order in processed_orders:
+                    quantity = order.quantity
+                    order_id = order.id
+                    
+                    for piece_num in range(quantity):
+                        piece_id = f"{order_id}_{piece_num + 1}"
+                        piece_width = order.shape.width
+                        piece_height = order.shape.height
+                        
+                        placed = False
+                        
+                        # Try to place in each stock (First Fit strategy)
+                        for stock in working_stocks:
+                            try:
+                                # Try without rotation
+                                position = self._find_valid_position(
+                                    stock, piece_width, piece_height
+                                )
+                                
+                                if position:
+                                    x, y = position
+                                    self._place_piece(stock, piece_id, x, y, piece_width, piece_height, False)
+                                    placed_shapes.append({
+                                        'piece_id': piece_id,
+                                        'stock_id': stock['id'],
+                                        'x': x,
+                                        'y': y, 
+                                        'width': piece_width,
+                                        'height': piece_height,
+                                        'rotated': False
+                                    })
+                                    placed = True
+                                    break
+                                
+                                # Try with rotation (if enabled)
+                                if config.allow_rotation and piece_width != piece_height:
+                                    position = self._find_valid_position(
+                                        stock, piece_height, piece_width
+                                    )
+                                    
+                                    if position:
+                                        x, y = position
+                                        self._place_piece(stock, piece_id, x, y, piece_height, piece_width, True)
+                                        placed_shapes.append({
+                                            'piece_id': piece_id,
+                                            'stock_id': stock['id'],
+                                            'x': x,
+                                            'y': y,
+                                            'width': piece_height,  # Rotated
+                                            'height': piece_width,  # Rotated
+                                            'rotated': True
+                                        })
+                                        placed = True
+                                        break
+                                        
+                            except Exception as placement_error:
+                                # Log placement error but continue with next stock
+                                error_handler.handle_error(
+                                    placement_error,
+                                    context={
+                                        "piece_id": piece_id,
+                                        "stock_id": stock['id'],
+                                        "piece_dimensions": f"{piece_width}x{piece_height}"
+                                    },
+                                    operation="piece_placement",
+                                    reraise=False
+                                )
+                                continue
+                        
+                        # If piece couldn't be placed, add to unfulfilled
+                        if not placed:
+                            unfulfilled_orders.append(order)
+                
+                # Calculate final metrics
+                total_used_stocks = len([s for s in working_stocks if s['occupied_areas']])
+                
+                computation_time = time.time() - start_time
+                
+                # Convert to PlacedShape objects first
+                result_shapes = []
+                for shape_data in placed_shapes:
+                    # Create a Rectangle shape for the placed piece
+                    from surface_optimizer.core.geometry import Rectangle
+                    shape = Rectangle(shape_data['width'], shape_data['height'])
+                    shape.x = shape_data['x']
+                    shape.y = shape_data['y']
+                    
+                    placed_shape = PlacedShape(
+                        order_id=shape_data['piece_id'].split('_')[0],  # Extract order ID from piece ID
+                        shape=shape,
+                        stock_id=shape_data['stock_id']
+                    )
+                    result_shapes.append(placed_shape)
+                
+                # Create temporary result to calculate efficiency
+                temp_result = CuttingResult(
+                    placed_shapes=result_shapes,
+                    efficiency_percentage=0.0,  # Will be calculated
+                    total_stock_used=total_used_stocks,
+                    algorithm_used=self.name,
+                    computation_time=computation_time,
+                    unfulfilled_orders=unfulfilled_orders
+                )
+                
+                # Now calculate efficiency with proper parameters
+                efficiency = calculate_efficiency(temp_result, stocks)
+                
+                logger.info(f"✅ First Fit optimization completed:")
+                logger.info(f"   • Placed pieces: {len(placed_shapes)}/{total_pieces}")
+                logger.info(f"   • Efficiency: {efficiency:.1f}%")
+                logger.info(f"   • Stocks used: {total_used_stocks}")
+                logger.info(f"   • Computation time: {computation_time:.3f}s")
+                
+                return CuttingResult(
+                    placed_shapes=result_shapes,
+                    efficiency_percentage=efficiency,
+                    total_stock_used=total_used_stocks,
+                    algorithm_used=self.name,
+                    computation_time=computation_time,
+                    unfulfilled_orders=unfulfilled_orders
+                )
+                
+            except Exception as e:
+                # Handle any unexpected errors during optimization
+                error_handler.handle_error(
+                    AlgorithmError(f"First Fit algorithm failed: {str(e)}"),
+                    context={
+                        "stage": "optimization_execution",
+                        "placed_pieces": len(placed_shapes) if 'placed_shapes' in locals() else 0,
+                        "computation_time": time.time() - start_time
+                    },
+                    operation="first_fit_execution",
+                    reraise=True
+                )
     
     def _find_valid_position(self, stock: Dict, width: float, height: float):
         """

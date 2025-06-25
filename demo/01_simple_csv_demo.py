@@ -88,7 +88,7 @@ def run_optimization(stocks, orders):
         cutting_width=3.0,                         # 3mm blade kerf
         save_visualization="layout.png",          # NEW: Auto-save visualization
         save_report="report.json",                # NEW: Auto-save report
-        output_dir="demo/data/01_simple/results"  # NEW: Specify output directory
+        output_dir="demo/outputs/01_simple/results"  # NEW: Specify output directory
     )
     
     print("=" * 40)

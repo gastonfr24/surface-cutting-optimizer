@@ -88,7 +88,7 @@ def run_optimization(stocks, orders):
         max_computation_time=30,                    # Sufficient time for optimization
         save_visualization="multi_layout.png",     # NEW: Auto-save visualization
         save_report="multi_report.json",           # NEW: Auto-save report
-        output_dir="demo/data/02_multi/results"    # NEW: Specify output directory
+        output_dir="demo/outputs/02_multi"         # NEW: Specify output directory
     )
     
     print("=" * 40)
@@ -104,7 +104,7 @@ def show_advanced_features(result, stocks, orders):
     print("-" * 26)
     
     # Create results directory
-    results_dir = Path(__file__).parent.parent / "demo" / "data" / "02_multi" / "results"
+    results_dir = Path(__file__).parent.parent / "demo" / "data" / "02_multi"
     results_dir.mkdir(parents=True, exist_ok=True)
     
     # 1. Show cutting plan interactively (if running in Jupyter/interactive)

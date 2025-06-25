@@ -65,7 +65,7 @@ def ejemplo_1_basico():
     result = optimize(stocks, orders, priority='balanced')
     print(f"✅ Optimización: {result.efficiency_percentage:.1f}% eficiencia")
     
-    output_dir = "demo/data/05_reports/01_basicos"
+    output_dir = "demo/outputs/05_reports/01_basicos"
     
     print("\n📄 Generando reportes básicos...")
     
@@ -100,7 +100,7 @@ def ejemplo_2_html_profesional():
     stocks, orders = demo_setup()
     result = optimize(stocks, orders)
     
-    output_dir = "demo/data/05_reports/02_html"
+    output_dir = "demo/outputs/05_reports/02_html"
     
     print("\n🎨 Generando reportes HTML...")
     
@@ -183,7 +183,7 @@ def ejemplo_3_documentos_oficiales():
     stocks, orders = demo_setup()
     result = optimize(stocks, orders)
     
-    output_dir = "demo/data/05_reports/03_oficiales"
+    output_dir = "demo/outputs/05_reports/03_oficiales"
     
     print("\n📄 Generando documentos oficiales...")
     
@@ -258,7 +258,7 @@ def ejemplo_4_datos_y_excel():
     stocks, orders = demo_setup()
     result = optimize(stocks, orders)
     
-    output_dir = "demo/data/05_reports/04_datos"
+    output_dir = "demo/outputs/05_reports/04_datos"
     
     print("\n📈 Generando reportes de datos...")
     
@@ -313,7 +313,7 @@ def ejemplo_5_multiidioma():
     stocks, orders = demo_setup()
     result = optimize(stocks, orders)
     
-    output_dir = "demo/data/05_reports/05_multiidioma"
+    output_dir = "demo/outputs/05_reports/05_multiidioma"
     
     print("\n🗣️ Generando reportes en múltiples idiomas...")
     
@@ -354,7 +354,7 @@ def ejemplo_6_filtros_avanzados():
     stocks, orders = demo_setup()
     result = optimize(stocks, orders)
     
-    output_dir = "demo/data/05_reports/06_filtros"
+    output_dir = "demo/outputs/05_reports/06_filtros"
     
     print("\n🎯 Generando reportes con filtros...")
     
@@ -416,7 +416,7 @@ def ejemplo_7_casos_especiales():
     stocks, orders = demo_setup()
     result = optimize(stocks, orders)
     
-    output_dir = "demo/data/05_reports/07_especiales"
+    output_dir = "demo/outputs/05_reports/07_especiales"
     
     print("\n🔧 Generando casos especiales...")
     
@@ -500,7 +500,7 @@ def main():
     print()
     
     # Crear directorio base
-    base_dir = Path("demo/data/05_reports")
+    base_dir = Path("demo/outputs/05_reports")
     base_dir.mkdir(exist_ok=True, parents=True)
     
     # Ejecutar todos los ejemplos

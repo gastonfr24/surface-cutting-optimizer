@@ -73,7 +73,7 @@ def demo_basico_visualizacion(result):
     result.visualize()  # Sin archivo = muestra en ventana
     
     print("\n💾 2. Guardando imagen básica...")
-    result.visualize("basico.png", "data/06_visualizations/01_basico")
+    result.visualize("basico.png", "demo/outputs/06_visualizations/01_basico")
     
     print("✅ Métodos básicos completados")
 

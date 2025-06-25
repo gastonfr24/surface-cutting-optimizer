@@ -1,0 +1,47 @@
+{
+  "title": "Optimization Report",
+  "generation_date": "2025-06-25T20:00:30.791824",
+  "summary": {
+    "total_stocks": 5,
+    "total_orders": 10,
+    "efficiency": 75.04093567251462,
+    "fulfillment_rate": 100.0
+  },
+  "performance": {
+    "efficiency_metrics": {
+      "overall_efficiency": 75.04093567251462,
+      "waste_percentage": 24.95906432748538,
+      "material_utilization": 75.04093567251462,
+      "computation_speed": 429788.29798135057,
+      "fulfillment_rate": 100.0
+    },
+    "cost_analysis": {
+      "total_cost": 55.75,
+      "cost_per_area": 43.446072319201996,
+      "cost_efficiency": 0.7504093567251462,
+      "waste_cost": 13.914678362573099,
+      "savings_potential": 13.914678362573099
+    },
+    "fulfillment_analysis": {
+      "fulfillment_rate": 100.0,
+      "orders_fulfilled": 10,
+      "orders_pending": 0,
+      "success_score": 75.04093567251462
+    },
+    "waste_analysis": {
+      "waste_percentage": 24.95906432748538,
+      "total_waste_cost": 13.914678362573099,
+      "waste_area": 0.0,
+      "recyclable_percentage": 85.0
+    },
+    "optimization_time": 0.0023267269134521484
+  },
+  "algorithm": "best_fit",
+  "metadata": {
+    "algorithm_selection": {
+      "selected_algorithm": "best_fit",
+      "selection_method": "automatic",
+      "priority": "speed"
+    }
+  }
+}

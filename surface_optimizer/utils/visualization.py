@@ -3,10 +3,15 @@ Visualization utilities for Surface Cutting Optimizer
 """
 
 from typing import List, Optional, Dict, Any
+import matplotlib
+# Set non-interactive backend to avoid TCL/TK issues on Windows
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.patches import Rectangle as MPLRectangle
 import numpy as np
+import os
+from pathlib import Path
 from ..core.models import Stock, CuttingResult, PlacedShape
 from ..core.geometry import Rectangle, Circle
 
@@ -62,9 +67,15 @@ def visualize_cutting_plan(result: CuttingResult, stocks: List[Stock],
     
     if not result.placed_shapes:
         print("No shapes to visualize")
-        return
+        return False
     
     try:
+        # Validate and normalize format
+        valid_formats = {'png', 'jpg', 'jpeg', 'pdf', 'svg', 'eps', 'tiff', 'webp'}
+        if format.lower() not in valid_formats:
+            print(f"Format '{format}' is not supported (supported formats: {', '.join(sorted(valid_formats))})")
+            format = 'png'  # Default fallback
+        
         # Define color themes
         themes = {
             'default': {
@@ -106,7 +117,7 @@ def visualize_cutting_plan(result: CuttingResult, stocks: List[Stock],
         # Create subplots with dynamic layout
         num_stocks = len(shapes_by_stock)
         if num_stocks == 0:
-            return
+            return False
         
         # Calculate layout based on style
         if layout_style == 'single_row':
@@ -203,60 +214,59 @@ def visualize_cutting_plan(result: CuttingResult, stocks: List[Stock],
                         )
                         ax.add_patch(circle)
                         
-                        # Add label with adaptive font size
-                        # Calculate adaptive font size based on circle diameter
-                        diameter = shape.radius * 2
-                        if diameter < 80:
-                            font_size = max(4, diameter / 20)  # Very small text for small circles
-                        elif diameter < 150:
-                            font_size = max(5, diameter / 25)  # Small text
-                        else:
-                            font_size = max(6, min(8, diameter / 30))  # Normal text
-                        
                         if show_labels:
                             ax.text(shape.x + shape.radius, shape.y + shape.radius,
-                                   placed_shape.order_id.split('_')[0],
-                                   ha='center', va='center', fontsize=font_size, weight='bold')
-                except Exception as e:
-                    print(f"Warning: Could not draw shape {placed_shape.order_id}: {e}")
+                                   placed_shape.order_id.split('_')[0], 
+                                   ha='center', va='center', fontsize=8, weight='bold')
+                    else:
+                        # For other shapes, try to draw a polygon approximation
+                        try:
+                            # Get bounding box as fallback
+                            min_x, min_y, max_x, max_y = shape.bounding_box()
+                            rect = patches.Rectangle(
+                                (min_x, min_y), max_x - min_x, max_y - min_y,
+                                linewidth=1, edgecolor=current_theme['shape_edge'], 
+                                facecolor=color, alpha=0.7
+                            )
+                            ax.add_patch(rect)
+                        except:
+                            pass  # Skip shapes we can't draw
+                except Exception as shape_error:
+                    print(f"Warning: Could not draw shape {placed_shape.order_id}: {shape_error}")
+                    continue
             
             # Set axis properties
             ax.set_xlim(0, stock.width)
             ax.set_ylim(0, stock.height)
             ax.set_aspect('equal')
             
-            # Build title with conditional information
-            title_parts = [f'Stock {stock_id}']
-            if show_dimensions:
-                title_parts.append(f'{stock.width}x{stock.height}mm')
-            if show_cost and hasattr(stock, 'cost_per_unit'):
-                title_parts.append(f'${stock.cost_per_unit:.2f}')
-            
-            ax.set_title('\n'.join(title_parts), fontsize=10, weight='bold')
-            
-            # Configure grid
+            # Show grid if requested
             if show_grid:
                 ax.grid(True, alpha=grid_alpha)
-            else:
-                ax.grid(False)
+            
+            # Set title with stock info
+            title_parts = [f"Stock: {stock.id}"]
+            if show_dimensions:
+                title_parts.append(f"({stock.width:.0f}×{stock.height:.0f} mm)")
+            
+            placed_count = len(shapes)
+            efficiency = (sum(s.shape.area() for s in shapes) / stock.area) * 100
+            title_parts.append(f"{placed_count} pieces, {efficiency:.1f}% efficiency")
+            
+            if show_cost and hasattr(stock, 'cost_per_unit'):
+                title_parts.append(f"Cost: ${stock.cost_per_unit:.2f}")
+            
+            ax.set_title('\n'.join(title_parts), fontsize=10, weight='bold')
         
         # Hide unused subplots
-        for i in range(num_stocks, len(axes)):
+        for i in range(len(shapes_by_stock), len(axes)):
             axes[i].set_visible(False)
         
-        # Overall title with conditional information
-        title_parts = [f'Cutting Plan - {result.algorithm_used}']
-        
-        info_line = []
+        # Create overall title
+        title_parts = [f"Cutting Plan Optimization"]
         if show_efficiency:
-            info_line.append(f'Efficiency: {result.efficiency_percentage:.1f}%')
-        info_line.append(f'Stocks Used: {result.total_stock_used}')
-        info_line.append(f'Orders Fulfilled: {result.total_orders_fulfilled}')
-        if show_cost:
-            info_line.append(f'Cost: ${result.total_cost:.2f}')
-        
-        if info_line:
-            title_parts.append(' | '.join(info_line))
+            title_parts.append(f"Overall Efficiency: {result.efficiency_percentage:.1f}%")
+        title_parts.append(f"Stocks Used: {result.total_stock_used}, Orders Fulfilled: {result.total_orders_fulfilled}")
         
         fig.suptitle('\n'.join(title_parts), fontsize=14, weight='bold')
         
@@ -265,25 +275,47 @@ def visualize_cutting_plan(result: CuttingResult, stocks: List[Stock],
         
         if save_path:
             # Create output directory if it doesn't exist
-            from pathlib import Path
             output_path = Path(output_dir)
             output_path.mkdir(parents=True, exist_ok=True)
             
             # Construct full path with format
             file_name = save_path
-            if not save_path.lower().endswith(('.png', '.jpg', '.jpeg', '.pdf', '.svg')):
+            if not any(save_path.lower().endswith(f'.{fmt}') for fmt in valid_formats):
                 file_name = f"{save_path}.{format}"
             
             full_path = output_path / file_name
-            plt.savefig(full_path, dpi=dpi, bbox_inches='tight', format=format)
-            print(f"Cutting plan saved to {full_path}")
-            plt.close()  # Close to free memory
+            
+            # Save with error handling
+            try:
+                plt.savefig(str(full_path), dpi=dpi, bbox_inches='tight', format=format)
+                print(f"✅ Visualization saved: {full_path}")
+                plt.close()  # Close to free memory
+                return True
+            except Exception as save_error:
+                print(f"Error saving file: {save_error}")
+                # Try to save as PNG fallback
+                try:
+                    png_path = output_path / f"{Path(save_path).stem}.png"
+                    plt.savefig(str(png_path), dpi=dpi, bbox_inches='tight', format='png')
+                    print(f"✅ Visualization saved as PNG fallback: {png_path}")
+                    plt.close()
+                    return True
+                except Exception as fallback_error:
+                    print(f"Failed to save even as PNG: {fallback_error}")
+                    plt.close()
+                    return False
         else:
-            plt.show()
+            # Don't try to show interactively - just return success
+            plt.close()
+            return True
             
     except Exception as e:
         print(f"Visualization error: {e}")
-        plt.close()  # Ensure cleanup even on error
+        try:
+            plt.close()  # Ensure cleanup even on error
+        except:
+            pass
+        return False
 
 
 def plot_algorithm_comparison(results: List[CuttingResult], algorithm_names: List[str],
@@ -501,6 +533,7 @@ def visualize_management_report(result: CuttingResult, stocks: List[Stock], orde
     - Detailed stock and order information panel
     - Professional layout optimized for presentations
     - Summary statistics and efficiency metrics
+    - Smart layout for multiple panels
     
     Args:
         result: CuttingResult from optimization
@@ -530,26 +563,6 @@ def visualize_management_report(result: CuttingResult, stocks: List[Stock], orde
         
         current_theme = themes.get(theme, themes['professional'])
         
-        # Create figure with custom layout for management report
-        if show_detailed_info:
-            fig = plt.figure(figsize=figsize)
-            # Create custom layout: main plot + info panel with better spacing
-            gs = fig.add_gridspec(3, 5, height_ratios=[0.8, 0.1, 4], width_ratios=[3, 3, 3, 0.1, 2.5], 
-                                hspace=0.15, wspace=0.1)
-            
-            # Title area (spans top row)
-            title_ax = fig.add_subplot(gs[0, :])
-            title_ax.axis('off')
-            
-            # Main cutting plan area (with spacing)
-            main_ax = fig.add_subplot(gs[2, :3])
-            
-            # Info panel (with better width)
-            info_ax = fig.add_subplot(gs[2, 4])
-            info_ax.axis('off')
-        else:
-            fig, main_ax = plt.subplots(figsize=figsize)
-        
         # Get used stocks
         used_stock_ids = set(ps.stock_id for ps in result.placed_shapes)
         used_stocks = [s for s in stocks if s.id in used_stock_ids]
@@ -558,26 +571,165 @@ def visualize_management_report(result: CuttingResult, stocks: List[Stock], orde
             print("No stocks to visualize")
             return
         
-        # Plot cutting plans in main area
         num_stocks = len(used_stocks)
+        
+        # Smart layout calculation based on number of stocks
         if num_stocks == 1:
-            # Single stock - use full main area
-            ax = main_ax
-            stock = used_stocks[0]
-            plot_single_stock(ax, stock, result, current_theme, True, True)
+            # Single stock layout - keep current
+            layout_config = {
+                'main_cols': 1,
+                'main_rows': 1,
+                'height_ratios': [0.8, 0.1, 4],
+                'width_ratios': [3, 3, 3, 0.1, 2.5] if show_detailed_info else [1],
+                'figsize_multiplier': 1.0
+            }
+        elif num_stocks == 2:
+            # Two stocks side by side - keep current  
+            layout_config = {
+                'main_cols': 2,
+                'main_rows': 1,
+                'height_ratios': [0.8, 0.1, 4],
+                'width_ratios': [3, 3, 3, 0.1, 2.5] if show_detailed_info else [1, 1],
+                'figsize_multiplier': 1.0
+            }
+        elif num_stocks <= 4:
+            # 3-4 stocks in 2x2 grid - bigger size
+            layout_config = {
+                'main_cols': 2,
+                'main_rows': 2,
+                'height_ratios': [0.6, 0.05, 5],  # More space for stocks
+                'width_ratios': [3, 3, 3, 0.1, 2.5] if show_detailed_info else [1, 1],
+                'figsize_multiplier': 1.3  # 30% bigger
+            }
+        elif num_stocks <= 6:
+            # 5-6 stocks in 2 columns, 3 rows max - maintain readability
+            layout_config = {
+                'main_cols': 2,
+                'main_rows': 3,
+                'height_ratios': [0.5, 0.05, 6],  # Even more space for stocks
+                'width_ratios': [3, 3, 3, 0.1, 2.5] if show_detailed_info else [1, 1],
+                'figsize_multiplier': 1.6  # 60% bigger
+            }
+        elif num_stocks <= 9:
+            # 7-9 stocks in 3 columns, 3 rows - optimal balance
+            layout_config = {
+                'main_cols': 3,
+                'main_rows': 3,
+                'height_ratios': [0.4, 0.05, 7],  # Maximum space for stocks
+                'width_ratios': [2, 2, 2, 0.1, 2] if show_detailed_info else [1, 1, 1],
+                'figsize_multiplier': 2.0  # Double size
+            }
         else:
-            # Multiple stocks - create subplots within main area
-            cols = min(3, num_stocks)
-            rows = (num_stocks + cols - 1) // cols
+            # 10+ stocks - fallback to vertical but with better proportions
+            if show_detailed_info:
+                layout_config = {
+                    'main_cols': 1,
+                    'main_rows': min(num_stocks, 8),  # Limit to 8 to keep readable
+                    'height_ratios': [0.3, 0.02] + [1] * min(num_stocks, 8),
+                    'width_ratios': [5, 0.1, 2],
+                    'figsize_multiplier': 2.5  # Much bigger for many stocks
+                }
+            else:
+                layout_config = {
+                    'main_cols': 2,  # Use 2 columns even for many stocks
+                    'main_rows': min((num_stocks + 1) // 2, 6),  # Max 6 rows
+                    'height_ratios': [0.4, 0.05, 8],
+                    'width_ratios': [1, 1],
+                    'figsize_multiplier': 2.2
+                }
+        
+        # Calculate dynamic figure size
+        base_figsize = figsize
+        if layout_config['figsize_multiplier'] != 1.0:
+            # Adjust figure size based on layout complexity
+            new_width = base_figsize[0] * layout_config['figsize_multiplier']
+            new_height = base_figsize[1] * layout_config['figsize_multiplier']
+            # Cap maximum size for practical reasons
+            new_width = min(new_width, 24)  # Max 24 inches wide
+            new_height = min(new_height, 20)  # Max 20 inches tall
+            dynamic_figsize = (new_width, new_height)
+        else:
+            dynamic_figsize = base_figsize
+        
+        # Create figure with smart layout
+        if show_detailed_info:
+            fig = plt.figure(figsize=dynamic_figsize)
+            gs = fig.add_gridspec(
+                len(layout_config['height_ratios']), 
+                len(layout_config['width_ratios']), 
+                height_ratios=layout_config['height_ratios'],
+                width_ratios=layout_config['width_ratios'],
+                hspace=0.15, wspace=0.1
+            )
             
-            main_ax.axis('off')  # Hide main axis
+            # Title area (spans top row)
+            title_ax = fig.add_subplot(gs[0, :])
+            title_ax.axis('off')
             
+            # Info panel (if showing detailed info)
+            info_ax = fig.add_subplot(gs[2:, -1])
+            info_ax.axis('off')
+        else:
+            fig, main_ax = plt.subplots(figsize=dynamic_figsize)
+        
+        # Plot stocks with improved positioning
+        if num_stocks == 1:
+            # Single stock
+            if show_detailed_info:
+                main_ax = fig.add_subplot(gs[2, :3])
+            stock = used_stocks[0]
+            plot_single_stock(main_ax, stock, result, current_theme, True, True)
+            
+        elif num_stocks == 2:
+            # Two stocks side by side
+            if show_detailed_info:
+                for i, stock in enumerate(used_stocks):
+                    sub_ax = fig.add_subplot(gs[2, i])
+                    plot_single_stock(sub_ax, stock, result, current_theme, True, True)
+            else:
+                for i, stock in enumerate(used_stocks):
+                    sub_ax = fig.add_subplot(1, 2, i + 1)
+                    plot_single_stock(sub_ax, stock, result, current_theme, True, True)
+        
+        elif num_stocks <= 9 and show_detailed_info:
+            # Grid layout with info panel (3-9 stocks)
             for i, stock in enumerate(used_stocks):
-                row = i // cols
-                col = i % cols
-                # Create subplot within main area
-                sub_ax = fig.add_subplot(rows, cols, i + 1)
+                row = i // layout_config['main_cols']
+                col = i % layout_config['main_cols']
+                # Create subplot in the main stock area (gs[2, :3])
+                stock_gs = gs[2, :3].subgridspec(layout_config['main_rows'], layout_config['main_cols'],
+                                                hspace=0.3, wspace=0.2)
+                sub_ax = fig.add_subplot(stock_gs[row, col])
                 plot_single_stock(sub_ax, stock, result, current_theme, True, True)
+        
+        elif num_stocks <= 9 and not show_detailed_info:
+            # Grid layout without info panel (3-9 stocks)
+            for i, stock in enumerate(used_stocks):
+                row = i // layout_config['main_cols']
+                col = i % layout_config['main_cols']
+                sub_ax = fig.add_subplot(layout_config['main_rows'], layout_config['main_cols'], i + 1)
+                plot_single_stock(sub_ax, stock, result, current_theme, True, True)
+        
+        else:
+            # Fallback for 10+ stocks - simplified vertical or 2-column layout
+            if show_detailed_info:
+                # Vertical layout with info panel
+                displayed_stocks = used_stocks[:layout_config['main_rows']]
+                for i, stock in enumerate(displayed_stocks):
+                    sub_ax = fig.add_subplot(gs[2 + i, 0])
+                    plot_single_stock(sub_ax, stock, result, current_theme, True, True)
+                
+                # Show count if not all stocks displayed
+                if len(used_stocks) > layout_config['main_rows']:
+                    remaining = len(used_stocks) - layout_config['main_rows']
+                    print(f"Note: Showing first {layout_config['main_rows']} stocks. {remaining} additional stocks used.")
+            else:
+                # 2-column layout without info panel
+                for i, stock in enumerate(used_stocks[:layout_config['main_rows'] * 2]):
+                    row = i // 2
+                    col = i % 2
+                    sub_ax = fig.add_subplot(layout_config['main_rows'], 2, i + 1)
+                    plot_single_stock(sub_ax, stock, result, current_theme, True, True)
         
         # Add management report title
         if show_detailed_info:
@@ -594,7 +746,7 @@ def visualize_management_report(result: CuttingResult, stocks: List[Stock], orde
         
         # Add detailed information panel
         if show_detailed_info:
-            add_info_panel(info_ax, result, used_stocks, orders, current_theme)
+            add_info_panel(info_ax, result, used_stocks, orders, current_theme, stocks)
         
         # Save the report
         if save_path:
@@ -701,7 +853,7 @@ def plot_single_stock(ax, stock: Stock, result: CuttingResult, theme: Dict,
 
 
 def add_info_panel(ax, result: CuttingResult, used_stocks: List[Stock], 
-                  orders=None, theme: Dict = None):
+                  orders=None, theme: Dict = None, all_stocks=None):
     """Add detailed information panel to the management report"""
     
     ax.set_xlim(0, 1)
@@ -758,8 +910,15 @@ def add_info_panel(ax, result: CuttingResult, used_stocks: List[Stock],
            fontsize=10, weight='bold', color=theme['text_color'])
     y_pos -= line_height * 1.2
     
-    ax.text(0.1, y_pos, f'Total stocks: {len(used_stocks)}', 
-           ha='left', va='top', fontsize=9, color=theme['text_color'])
+    # Show stocks used/total like orders format
+    if all_stocks:
+        total_stocks = len(all_stocks)
+        used_stocks_count = len(used_stocks)
+        ax.text(0.1, y_pos, f'Stocks: {used_stocks_count}/{total_stocks}', 
+               ha='left', va='top', fontsize=9, color=theme['text_color'])
+    else:
+        ax.text(0.1, y_pos, f'Total stocks: {len(used_stocks)}', 
+               ha='left', va='top', fontsize=9, color=theme['text_color'])
     y_pos -= line_height * 0.8
     
     total_stock_area = sum(s.area for s in used_stocks)

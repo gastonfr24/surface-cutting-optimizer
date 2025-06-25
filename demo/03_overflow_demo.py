@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Demo 3: Smart Overflow Handling - Order discarding when demand exceeds stock
-===========================================================================
+Demo 3: Smart Overflow Handling - When demand exceeds stock capacity
+====================================================================
 
 🎯 Shows how smart optimization handles insufficient stock capacity
 
@@ -28,39 +28,46 @@ def load_data_from_csv():
     print("📂 Loading Overflow Test Data")
     print("-" * 30)
     
-    # 1. Load limited stock (small panel)
-    data_path = Path(__file__).parent.parent / "demo" / "data" / "03_overflow"
-    
-    stock_df = pd.read_csv(data_path / "simple_stock.csv")
-    stocks = [
-        Stock(
-            id=row['stock_id'],
-            width=row['width'], 
-            height=row['height'],
-            material_type=MaterialType.METAL,
-            cost_per_unit=row['cost']
-        )
-        for _, row in stock_df.iterrows()
-    ]
-    
-    # 2. Load orders (designed to exceed stock capacity)
-    orders_df = pd.read_csv(data_path / "simple_orders.csv")
-    orders = [
-        Order(
-            id=row['order_id'],
-            shape=Rectangle(row['width'], row['height']),
-            quantity=row['quantity'],
-            priority=Priority.URGENT if row['priority'] == 'URGENT' 
-                    else Priority.HIGH if row['priority'] == 'HIGH'
-                    else Priority.MEDIUM if row['priority'] == 'MEDIUM'
-                    else Priority.LOW,
-            material_type=MaterialType.METAL
-        )
-        for _, row in orders_df.iterrows()
-    ]
-    
-    print(f"✅ Loaded {len(stocks)} stock panel, {len(orders)} orders")
-    return stocks, orders
+    try:
+        # 1. Define data path
+        data_path = Path(__file__).parent / "data" / "03_overflow"
+        
+        # 2. Load single stock panel (limited capacity)
+        stock_df = pd.read_csv(data_path / "overflow_stock.csv")
+        stocks = [
+            Stock(
+                id=row['stock_id'],
+                width=row['width'], 
+                height=row['height'],
+                material_type=MaterialType.METAL,
+                cost_per_unit=row['cost']
+            )
+            for _, row in stock_df.iterrows()
+        ]
+        
+        # 3. Load many orders with different priorities (designed to overflow)
+        orders_df = pd.read_csv(data_path / "overflow_orders.csv")
+        orders = [
+            Order(
+                id=row['order_id'],
+                shape=Rectangle(row['width'], row['height']),
+                quantity=row['quantity'],
+                priority=Priority.URGENT if row['priority'] == 'URGENT' 
+                        else Priority.HIGH if row['priority'] == 'HIGH'
+                        else Priority.MEDIUM if row['priority'] == 'MEDIUM'
+                        else Priority.LOW,
+                material_type=MaterialType.METAL
+            )
+            for _, row in orders_df.iterrows()
+        ]
+        
+        print(f"✅ Loaded {len(stocks)} stock panel, {len(orders)} orders")
+        return stocks, orders
+        
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        print("💡 Check CSV files exist in demo/data/03_overflow/")
+        return None, None
 
 
 def analyze_demand_vs_stock(stocks, orders):
@@ -114,7 +121,7 @@ def run_optimization(stocks, orders):
         max_computation_time=10,                      # Fast processing for overflow demo
         save_visualization="overflow_layout.png",    # NEW: Auto-save visualization
         save_report="overflow_report.json",          # NEW: Auto-save report
-        output_dir="demo/data/03_overflow/results"   # NEW: Specify output directory
+        output_dir="demo/outputs/03_overflow/results"  # Correct path pattern
     )
     
     print("=" * 35)
@@ -181,6 +188,51 @@ def analyze_results(result, orders):
     print("   Lower priority orders more likely to be discarded")
 
 
+def generate_overflow_management_report(result, stocks, orders):
+    """Generate management report with overflow analysis and visual summary"""
+    
+    print("\n📊 Generating Overflow Management Report")
+    print("-" * 41)
+    
+    # Create output directory
+    output_dir = "demo/outputs/03_overflow/management"
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    
+    # 1. Generate PNG report with visual summary (simple way)
+    print("🖼️  Creating visual summary image...")
+    
+    try:
+        result.management_report("overflow_visual_summary.png", output_dir,
+                                figsize=(16, 12),
+                                dpi=200,
+                                format='png',
+                                theme='professional',
+                                show_detailed_info=True)
+        print("   ✅ PNG Summary: Visual layout + overflow analysis")
+    
+    except Exception as e:
+        print(f"   ⚠️  PNG issue: {e}")
+    
+    # 2. Generate PDF version for professional use
+    print("📄 Creating PDF executive summary...")
+    
+    try:
+        result.management_report("overflow_executive_summary.pdf", output_dir,
+                                figsize=(14, 10),
+                                dpi=300,
+                                format='pdf',
+                                theme='professional',
+                                show_detailed_info=True)
+        print("   ✅ Executive PDF: Professional overflow report")
+    
+    except Exception as e:
+        print(f"   ⚠️  PDF issue: {e}")
+    
+    print(f"\n📁 Management reports saved to: {output_dir}")
+    
+    return output_dir
+
+
 def show_advanced_features(result, stocks, orders):
     """Show the new advanced convenience features (NEW)"""
     
@@ -188,7 +240,7 @@ def show_advanced_features(result, stocks, orders):
     print("-" * 31)
     
     # Create results directory
-    results_dir = Path(__file__).parent.parent / "demo" / "data" / "03_overflow" / "results"
+    results_dir = Path("demo/outputs/03_overflow/results")
     results_dir.mkdir(parents=True, exist_ok=True)
     
     # 1. Generate overflow-specific reports (NEW)
@@ -208,7 +260,7 @@ def show_advanced_features(result, stocks, orders):
     print(f"✅ All files saved to: {results_dir}")
     
     # 3. Display overflow metrics
-    total_orders = len([o for order in orders for _ in range(order.quantity)])
+    total_orders = len([order for order in orders for _ in range(order.quantity)])
     fulfilled_orders = len(result.placed_shapes)
     unfulfilled_orders = len(result.unfulfilled_orders)
     
@@ -246,7 +298,10 @@ def main():
     # Step 4: Analyze placement vs discarding results
     analyze_results(result, orders)
     
-    # Step 5: Show advanced features (NEW)
+    # Step 5: Generate management report with visual summary
+    mgmt_dir = generate_overflow_management_report(result, stocks, orders)
+    
+    # Step 6: Show advanced features (NEW)
     coord_data, perf_data, material_data = show_advanced_features(result, stocks, orders)
     
     print("\n✅ Overflow demo completed!")
@@ -255,11 +310,24 @@ def main():
     print("   • ✅ Auto-save visualization and reports")
     print("   • ✅ Built-in result.show() method")
     print("   • ✅ Overflow-specific analysis")
+    print("   • ✅ Management report with overflow analysis")
+    print("   • ✅ Visual summary PNG with discarded orders")
     print("   • ✅ Complete result.save_results() package")
+    
+    print(f"\n💡 Key Learnings:")
+    print(f"   • Priority system handles overflow intelligently")
+    print(f"   • Higher priority orders get placement preference")
+    print(f"   • Visual reports show fulfilled vs discarded breakdown")
+    print(f"   • Management reports include capacity analysis")
+    
+    print(f"\n📁 Generated Files:")
+    print(f"   • Executive PDF: {mgmt_dir}/overflow_executive_summary.pdf")
+    print(f"   • Visual Summary: {mgmt_dir}/overflow_visual_summary.png")
+    print(f"   • Layout Image: demo/outputs/03_overflow/results/overflow_layout.png")
     
     print("\n🚀 Next demos:")
     print("   • 04_priority_sorting_demo.py - Priority handling details")
-    print("   • 05_reports_and_charts_demo.py - Advanced reporting (NEW!)")
+    print("   • 05_reports_demo.py - Advanced reporting")
     print("\n💡 Key learning: Smart algorithms respect priorities even under overflow!")
 
 
